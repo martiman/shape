@@ -104,7 +104,7 @@
                 </div>
                 <div class="card">
                     <h3>Production-proven flow</h3>
-                    <p>The stack is already tested end-to-end with a complete Bruno collection.</p>
+                    <p>The bookshop example ships with a Bruno API test collection.</p>
                 </div>
             </div>
         </div>
@@ -150,7 +150,7 @@
                         <li><strong>Verify</strong> by diffing <code>?manifest</code>, <code>?openapi</code>, and a sample query — should be byte-equivalent.</li>
                         <li><strong>Switch</strong> traffic at DNS or load balancer. Reverse to roll back.</li>
                     </ol>
-                    <p class="polyglot-cta">No data migration. No API contract change. No client SDK regen. No frontend rewrite. <a href="migration.html">Full migration guide →</a></p>
+                    <p class="polyglot-cta">Same database, same API contract, same client SDKs. <a href="migration.html">Full migration guide →</a></p>
                 </div>
             </div>
         </div>
@@ -529,7 +529,7 @@ users.password_hash, *_secret, *_token
             <div class="section-head">
                 <p class="kicker">Step zero — Tell your AI about Shape</p>
                 <h2>One file, given to your AI tool, and Shape becomes part of its toolkit.</h2>
-                <p class="subtitle">The first move with Shape isn't writing code — it's handing <a href="https://github.com/martiman/shape/blob/main/php/AGENTS.md"><code>AGENTS.md</code></a> to your AI. ~5,000 tokens of curated context: every convention, every error envelope, every common mistake, written specifically for agents. After this single onboarding step, your AI writes correct Shape code on the first try — no Laravel-isms, no scaffolding loops, no re-fetching the manifest after every error.</p>
+                <p class="subtitle">Start by giving <a href="https://github.com/martiman/shape/blob/main/php/AGENTS.md"><code>AGENTS.md</code></a> to your AI. It is about 5,000 tokens covering Shape\'s conventions, error format and common mistakes, so the agent has them before it writes code.</p>
             </div>
 
             <div class="start-tools">
@@ -548,7 +548,7 @@ and then build me a backend for &lt;your domain&gt;.</code></pre>
                     <p>Fetch and attach as project context:</p>
                     <pre><code>curl https://raw.githubusercontent.com/martiman/shape/main/php/AGENTS.md
 # → paste output as a system message or upload as a project file</code></pre>
-                    <p class="start-note">Once the file is in the context window, Shape's conventions are part of the model's working memory for the session. The file fits comfortably alongside any project of normal size.</p>
+                    <p class="start-note">Once the file is in the context window, the agent can apply Shape's conventions for the rest of the session.</p>
                 </article>
 
                 <article class="start-tool">
@@ -563,7 +563,7 @@ and then build me a backend for &lt;your domain&gt;.</code></pre>
 
             <aside class="start-after">
                 <p class="kicker">What changes after the file is loaded</p>
-                <h3>The AI plans its work around Shape's grain instead of fighting it.</h3>
+                <h3>What the agent does differently</h3>
                 <ul>
                     <li><strong>It writes a schema first</strong>, not a controller class — because the schema <em>is</em> the spec.</li>
                     <li><strong>It uses <code>access['*']</code> for prototyping</strong>, not 30 lines of per-table boilerplate.</li>
@@ -571,8 +571,7 @@ and then build me a backend for &lt;your domain&gt;.</code></pre>
                     <li><strong>It reads the <code>expected</code> + <code>example</code> in error responses</strong> and corrects on the first retry, instead of re-fetching the manifest.</li>
                     <li><strong>It mounts the MCP server</strong> when the user says "let me ask Claude to query this" — because it knows that path exists.</li>
                 </ul>
-                <p>The AI stops being a generic backend assistant and starts being a Shape developer. That's the entire onboarding ceremony.</p>
-            </aside>
+                            </aside>
         </div>
     </section>
 
@@ -581,7 +580,7 @@ and then build me a backend for &lt;your domain&gt;.</code></pre>
             <div class="section-head">
                 <p class="kicker">Plug into Claude Desktop</p>
                 <h2>Mount Shape as a tool, in 60 seconds.</h2>
-                <p class="subtitle">Shape ships a built-in <a href="https://modelcontextprotocol.io/" target="_blank" rel="noopener">Model Context Protocol</a> server. Drop one block into your Claude Desktop / Cursor / Cline config and the entire backend appears as live tools and resources — same masks, same auth, same self-documenting errors. No SDK to install, no schema to translate.</p>
+                <p class="subtitle">Shape ships a built-in <a href="https://modelcontextprotocol.io/" target="_blank" rel="noopener">Model Context Protocol</a> server. Drop one block into your Claude Desktop / Cursor / Cline config and the backend appears as tools and resources, with the same masks, auth and error format as the HTTP API.</p>
             </div>
 
             <div class="mcp-configs">
@@ -632,7 +631,7 @@ and then build me a backend for &lt;your domain&gt;.</code></pre>
                 </article>
                 <article class="mcp-pillar">
                     <h3>Self-documenting errors flow through</h3>
-                    <p>A failing tool call returns <code>isError: true</code> with Shape's standard envelope: <code>code</code>, <code>message</code>, <code>expected</code>, <code>example</code>, <code>hint</code>. The agent corrects the call without re-fetching the manifest. Every retry-loop saving the HTTP API gives, applied to MCP too.</p>
+                    <p>A failing tool call returns <code>isError: true</code> with Shape's standard envelope: <code>code</code>, <code>message</code>, <code>expected</code>, <code>example</code>, <code>hint</code>. The agent corrects the call without re-fetching the manifest.</p>
                 </article>
                 <article class="mcp-pillar">
                     <h3>One source of truth</h3>
