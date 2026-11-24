@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShapeRuntime + Shape | Manual Runtime and Full API Framework with SQL Server support</title>
-    <meta name="description" content="ShapeRuntime is the manual runtime for masked queries, mutations, auth, and commands. Shape is the full framework on top with two authoring modes and support for MySQL, PostgreSQL, SQLite, and SQL Server.">
+    <title>Shape — your database is the API</title>
+    <meta name="description" content="Point Shape at MySQL, PostgreSQL, SQLite or SQL Server and get a secure JSON, OData, OpenAPI and MCP backend, with auth, audit log and multi-tenancy built in.">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -16,7 +16,7 @@
         <div class="container">
             <p>
                 <strong>New here?</strong>
-                Read the <a href="start.html">90-second pitch</a>, or drop <a href="https://github.com/martiman/shape/blob/main/AGENTS.md" target="_blank" rel="noopener"><code>AGENTS.md</code></a> into Claude / ChatGPT / Cursor / Codex — Shape's conventions become your AI's default in one paste.
+                Read the <a href="start.html">90-second pitch</a>, or drop <a href="https://github.com/martiman/shape/blob/main/php/AGENTS.md" target="_blank" rel="noopener"><code>AGENTS.md</code></a> into Claude / ChatGPT / Cursor / Codex — Shape's conventions become your AI's default in one paste.
             </p>
             <a class="top-banner-cta" href="start.html">
                 90-second pitch
@@ -48,11 +48,11 @@
     <main id="top">
     <section class="hero">
         <div class="container">
-            <p class="kicker">Freestyle Developer Stack</p>
-            <h1>One endpoint. Typed ops. Real business control.</h1>
-            <p class="subtitle">ShapeRuntime gives teams a single API entrypoint with role-aware auth, advanced query options, transactional mutations, and command-based business workflows. Shape sits on top when you want generated API surface from either entity classes or an existing database schema.</p>
+            <p class="kicker">Schema-driven backend framework</p>
+            <h1>Your database is the API.</h1>
+            <p class="subtitle">Point Shape at MySQL, PostgreSQL, SQLite or SQL Server and get a secure JSON, OData, OpenAPI and MCP backend, with auth, audit log and multi-tenancy built in. ShapeRuntime, the manual layer underneath, stays available when you need hand-written masks and commands.</p>
             <div class="cta-row">
-                <a href="https://github.com/martiman/shape/blob/main/AGENTS.md" target="_blank" rel="noopener" class="btn btn-ai">Get <code>AGENTS.md</code> for your AI →</a>
+                <a href="https://github.com/martiman/shape/blob/main/php/AGENTS.md" target="_blank" rel="noopener" class="btn btn-ai">Get <code>AGENTS.md</code> for your AI →</a>
                 <a href="#start" class="btn btn-solid">Onboard your AI</a>
                 <a href="#shape" class="btn btn-shape">See how Shape fits</a>
             </div>
@@ -634,7 +634,7 @@ users.password_hash, *_secret, *_token
             <div class="section-head">
                 <p class="kicker">Step zero — Tell your AI about Shape</p>
                 <h2>One file, given to your AI tool, and Shape becomes part of its toolkit.</h2>
-                <p class="subtitle">The first move with Shape isn't writing code — it's handing <a href="https://github.com/martiman/shape/blob/main/AGENTS.md"><code>AGENTS.md</code></a> to your AI. ~5,000 tokens of curated context: every convention, every error envelope, every common mistake, written specifically for agents. After this single onboarding step, your AI writes correct Shape code on the first try — no Laravel-isms, no scaffolding loops, no re-fetching the manifest after every error.</p>
+                <p class="subtitle">The first move with Shape isn't writing code — it's handing <a href="https://github.com/martiman/shape/blob/main/php/AGENTS.md"><code>AGENTS.md</code></a> to your AI. ~5,000 tokens of curated context: every convention, every error envelope, every common mistake, written specifically for agents. After this single onboarding step, your AI writes correct Shape code on the first try — no Laravel-isms, no scaffolding loops, no re-fetching the manifest after every error.</p>
             </div>
 
             <div class="start-tools">
@@ -642,7 +642,7 @@ users.password_hash, *_secret, *_token
                     <span class="start-badge">Claude Code · Claude Desktop</span>
                     <h3>Reference the file directly</h3>
                     <p>Paste in the URL or attach the file to your project:</p>
-                    <pre><code>Read https://github.com/martiman/shape/blob/main/AGENTS.md
+                    <pre><code>Read https://github.com/martiman/shape/blob/main/php/AGENTS.md
 and then build me a backend for &lt;your domain&gt;.</code></pre>
                     <p class="start-note">Claude reads the file once and applies every Shape convention from that point in the conversation. For deeper integration, mount the Shape MCP server — Claude Desktop then sees every endpoint as a live tool.</p>
                 </article>
@@ -651,7 +651,7 @@ and then build me a backend for &lt;your domain&gt;.</code></pre>
                     <span class="start-badge">ChatGPT · OpenAI · Codex</span>
                     <h3>Paste the contents into the system prompt</h3>
                     <p>Fetch and attach as project context:</p>
-                    <pre><code>curl https://raw.githubusercontent.com/martiman/shape/main/AGENTS.md
+                    <pre><code>curl https://raw.githubusercontent.com/martiman/shape/main/php/AGENTS.md
 # → paste output as a system message or upload as a project file</code></pre>
                     <p class="start-note">Once the file is in the context window, Shape's conventions are part of the model's working memory for the session. The file fits comfortably alongside any project of normal size.</p>
                 </article>
