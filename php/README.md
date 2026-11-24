@@ -61,6 +61,16 @@ Command operations for `op = command`:
 - Route dispatch is shared in `packages/shaperuntime/src/ShapeRuntime/Http/AppRouter.php`
 - No server rewrite rules are required
 
+## Run the bookshop example
+```bash
+cd php
+composer install
+cp apps/bookshop/config/env.example.php apps/bookshop/config/env.local.php   # set jwt_secret
+sqlite3 apps/bookshop/database/bookshop.sqlite < apps/bookshop/database/schema.sqlite.sql
+php -S 127.0.0.1:8099 -t apps/bookshop/public
+```
+Create a user (hash with `password_hash`) in the `users` table, then log in via `POST /api.php` with `{"op":"auth.token","payload":{"email":"...","password":"..."}}`.
+
 ## Local workflow
 1. Edit app code in `apps/bookshop`, shared runtime in `packages/shaperuntime`, Shape framework code in `packages/shape`, or web code in `../web`.
 2. Run tests with `cd bruno/bookshop && bru run --env local`.
