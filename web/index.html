@@ -1148,24 +1148,7 @@ Authorization: Bearer &lt;access_token&gt;</code></pre>
     <footer class="footer">
         <div class="container">
             <p>Shape &mdash; ShapeRuntime and Shape frameworks.</p>
-            <p class="host-ip-line">
-                Hosted on <code id="host-ip">resolving&hellip;</code>
-            </p>
         </div>
     </footer>
-    <script>
-    // Server's actual IP comes from the sidecar `ip.php` endpoint, which
-    // reads $_SERVER['SERVER_ADDR'] (or falls back to
-    // gethostbyname(gethostname())). Plain text response, one line, no
-    // caching. The placeholder is replaced as soon as the fetch resolves.
-    (function () {
-        var el = document.getElementById('host-ip');
-        if (!el) return;
-        fetch('ip.php', { cache: 'no-store' })
-            .then(function (r) { return r.ok ? r.text() : 'unresolved'; })
-            .then(function (txt) { el.textContent = (txt || 'unknown').trim(); })
-            .catch(function () { el.textContent = 'unresolved'; });
-    })();
-    </script>
 </body>
 </html>

@@ -377,23 +377,10 @@ await ShapeApp.Run("config/shape.json", args);
     <section class="mig-foot">
         <div class="container">
             <p>Browse the <a href="index.html">full architecture page</a> · See the <a href="start.html">90-second pitch</a></p>
-            <p class="host-ip-line">
-                Hosted on <code id="host-ip">resolving&hellip;</code>
-            </p>
         </div>
     </section>
 
     </main>
 
-    <script>
-    (function () {
-        var el = document.getElementById('host-ip');
-        if (!el) return;
-        fetch('ip.php', { cache: 'no-store' })
-            .then(function (r) { return r.ok ? r.text() : 'unresolved'; })
-            .then(function (txt) { el.textContent = (txt || 'unknown').trim(); })
-            .catch(function () { el.textContent = 'unresolved'; });
-    })();
-    </script>
 </body>
 </html>

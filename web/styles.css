@@ -1545,21 +1545,6 @@ body {
     }
 }
 
-/* Host-IP indicator — muted, monospace, sits at the very bottom of every
-   page so operators can see at a glance which server delivered the bytes
-   they're looking at. JS at the page bottom resolves the IP via Google
-   DNS-over-HTTPS and replaces the placeholder. */
-.host-ip-line {
-    margin-top: 0.45rem;
-    font-size: 0.78rem;
-    opacity: 0.7;
-}
-.host-ip-line code {
-    font-family: var(--mono);
-    background: rgba(34, 52, 111, 0.06);
-    padding: 0.05rem 0.4rem;
-    border-radius: 4px;
-}
 
 @keyframes rise {
     from {

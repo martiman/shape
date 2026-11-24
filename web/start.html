@@ -436,24 +436,8 @@ martiman/shape/main/php/AGENTS.md \
         <footer class="pitch-foot">
             <div class="container">
                 <p>Read the <a href="https://github.com/martiman/shape/blob/main/php/START-HERE.md" target="_blank" rel="noopener">90-second start</a> · Browse the <a href="index.html">full architecture page</a> · See the <a href="migration.html">PHP ↔ .NET migration guide</a> · <a href="https://github.com/martiman/shape/blob/main/STATUS.md" target="_blank" rel="noopener">Roadmap</a></p>
-                <p class="host-ip-line">
-                    Hosted on <code id="host-ip">resolving&hellip;</code>
-                </p>
             </div>
         </footer>
     </main>
-    <script>
-    // Server's actual IP comes from the sidecar `ip.php` endpoint, which
-    // reads $_SERVER['SERVER_ADDR'] (or falls back to
-    // gethostbyname(gethostname())). One-line plain-text response, no cache.
-    (function () {
-        var el = document.getElementById('host-ip');
-        if (!el) return;
-        fetch('ip.php', { cache: 'no-store' })
-            .then(function (r) { return r.ok ? r.text() : 'unresolved'; })
-            .then(function (txt) { el.textContent = (txt || 'unknown').trim(); })
-            .catch(function () { el.textContent = 'unresolved'; });
-    })();
-    </script>
 </body>
 </html>
