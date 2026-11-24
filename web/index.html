@@ -39,7 +39,6 @@
                     <li><a href="#flow">Flow</a></li>
                     <li><a href="#examples">Examples</a></li>
                     <li><a href="#endpoints">Endpoints</a></li>
-                    <li><a href="#contact">Contact</a></li>
                 </ul>
             </nav>
         </div>
@@ -68,7 +67,7 @@
         <div class="container">
             <div class="section-head">
                 <p class="kicker">Why ShapeRuntime</p>
-                <h2>A compact API layer for fast product intelligence.</h2>
+                <h2>One endpoint, masked queries, role checks.</h2>
             </div>
             <div class="feature-grid">
                 <div class="card">
@@ -487,7 +486,7 @@ users.password_hash, *_secret, *_token
             <div class="section-head">
                 <p class="kicker">Built for AI agents</p>
                 <h2>The smallest path to a working backend.</h2>
-                <p class="subtitle">Shape is engineered around one user — an AI agent producing a backend with the fewest possible tokens, retries, and structural mistakes. Every design choice favors clarity over flexibility, convention over configuration, and structure over vigilance.</p>
+                <p class="subtitle">Shape is designed so an AI agent can produce a backend with few tokens, retries and structural mistakes: convention over configuration, explicit roles, and errors that say how to fix the call.</p>
             </div>
 
             <div class="ai-pillars">
@@ -513,117 +512,13 @@ users.password_hash, *_secret, *_token
                 </article>
                 <article class="ai-pillar">
                     <h3>Token-frugal by design</h3>
-                    <p>Every roadmap item is judged against one question: does it remove tokens an AI agent would otherwise spend? Quick-start one-liners, auto-access conventions, and DDL-from-manifest are next.</p>
+                    <p>Roadmap items are judged by whether they remove code or retries an AI agent would otherwise need.</p>
                 </article>
             </div>
 
-            <div class="ai-economics">
-                <h3>Lines of code saved, line by line</h3>
-                <p class="ai-economics-caption">Estimates assume an AI agent producing the entire backend end-to-end — initial scaffold plus three iterations on the average endpoint, including the rewrites every retry loop drags along. Lines are PHP source the agent would otherwise have to write, review, and re-read; the same code that drives context-window pressure and breaks on every schema change. Conservative figures.</p>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Concern</th>
-                            <th>Without Shape</th>
-                            <th>With Shape</th>
-                            <th>Lines saved</th>
-                            <th>Invoicing<br><small>(Fakturoid-like, 30 entities)</small></th>
-                            <th>E-shop<br><small>(traditional, 50 entities)</small></th>
-                            <th>CRM<br><small>(typical, 100 tables)</small></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Define a table's API</td>
-                            <td>Entity class + repo + controller + validation</td>
-                            <td>Add table to <code>access</code></td>
-                            <td>~280 / entity</td>
-                            <td>~8.4k lines</td>
-                            <td>~14k lines</td>
-                            <td>~28k lines</td>
-                        </tr>
-                        <tr>
-                            <td>Soft-delete an entity</td>
-                            <td>Hand-roll WHERE, DELETE-as-UPDATE, restore endpoint</td>
-                            <td>Add <code>deleted_at TIMESTAMP NULL</code></td>
-                            <td>~50 / table</td>
-                            <td>~300 lines</td>
-                            <td>~500 lines</td>
-                            <td>~1.25k lines</td>
-                        </tr>
-                        <tr>
-                            <td>Validate inputs</td>
-                            <td>Per-column rules in code</td>
-                            <td>Inferred from <code>NOT NULL</code> / <code>VARCHAR(N)</code></td>
-                            <td>~24 / entity</td>
-                            <td>~720 lines</td>
-                            <td>~1.2k lines</td>
-                            <td>~2.4k lines</td>
-                        </tr>
-                        <tr>
-                            <td>Document for an LLM consumer</td>
-                            <td>Hand-write tool schemas</td>
-                            <td><code>?manifest&amp;format=anthropic-tools</code></td>
-                            <td>~100 / entity</td>
-                            <td>~3k lines</td>
-                            <td>~5k lines</td>
-                            <td>~10k lines</td>
-                        </tr>
-                        <tr>
-                            <td>Recover from a wrong call</td>
-                            <td>Read docs, retry, rewrite (full context re-load each loop)</td>
-                            <td><code>expected</code> + <code>example</code> in the error</td>
-                            <td>~50 / rewrite</td>
-                            <td>~1.5k lines</td>
-                            <td>~3k lines</td>
-                            <td>~6k lines</td>
-                        </tr>
-                        <tr>
-                            <td>Switch MySQL → SQL Server</td>
-                            <td>Rewrite dialect-specific SQL</td>
-                            <td>Change DSN</td>
-                            <td>~50 (one-time)</td>
-                            <td>~50 lines</td>
-                            <td>~50 lines</td>
-                            <td>~80 lines</td>
-                        </tr>
-                        <tr>
-                            <td>Hide sensitive columns from admins</td>
-                            <td>Custom view + endpoint + role check</td>
-                            <td><code>'admin_masks' =&gt; true</code></td>
-                            <td>~80 / secret table</td>
-                            <td>~320 lines</td>
-                            <td>~400 lines</td>
-                            <td>~640 lines</td>
-                        </tr>
-                        <tr>
-                            <td>Open everything for prototyping</td>
-                            <td>Generate boilerplate per table</td>
-                            <td><code>'access' =&gt; ['*' =&gt; ['admin','user']]</code></td>
-                            <td>(see row 1)</td>
-                            <td>(counted above)</td>
-                            <td>(counted above)</td>
-                            <td>(counted above)</td>
-                        </tr>
-                        <tr class="total-row">
-                            <th colspan="4">Total lines saved per project</th>
-                            <th>~14k lines</th>
-                            <th>~24k lines</th>
-                            <th>~48k lines</th>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <aside class="ai-economics-insight">
-                <p class="kicker">Why the cost compounds</p>
-                <h3>A 100-table CRM is not 8× harder than the 30-entity invoicing app — it's closer to 20×.</h3>
-                <p>48,000 lines is roughly half the size of a small PHP framework. These aren't dead boilerplate — every line is code the agent has to write <em>and</em> re-read on each iteration. Over a six-month build, the retry-loop and review surface scales super-linearly with table count: each schema change touches more files, each wrong assumption forces more rewrites, each new endpoint demands more context that has to be reloaded into the LLM. Shape collapses the multiplier by making the schema the spec — once.</p>
-            </aside>
-
             <div class="ai-bottomline">
-                <p class="kicker">The bottom line</p>
-                <h3>Shape is the library an AI picks because it succeeds on the first try.</h3>
+                <p class="kicker">Read more</p>
+                <h3>Where to go next</h3>
                 <p>Read the full case in <a href="https://github.com/martiman/shape/blob/main/docs/shape/WHY-SHAPE.md"><code>docs/shape/WHY-SHAPE.md</code></a>, browse the <a href="#shape">framework architecture</a>, or see what's <a href="https://github.com/martiman/shape/blob/main/STATUS.md">next on the roadmap</a>.</p>
             </div>
         </div>
@@ -754,9 +649,9 @@ and then build me a backend for &lt;your domain&gt;.</code></pre>
             </div>
 
             <div class="mcp-bottomline">
-                <p class="kicker">Discoverability changes everything</p>
-                <h3>Every Claude Desktop user is now a potential Shape user.</h3>
-                <p>Before MCP, Shape was "a framework I have to remember exists." After: every developer who installs Claude Desktop, Cursor, or Cline discovers Shape the moment they need a backend they can talk to. Read the full guide in <a href="https://github.com/martiman/shape/blob/main/docs/shape/MCP.md"><code>docs/shape/MCP.md</code></a>.</p>
+                <p class="kicker">Read more</p>
+                <h3>MCP setup guide</h3>
+                <p>Full configuration for stdio and streamable-HTTP is in <a href="https://github.com/martiman/shape/blob/main/docs/shape/MCP.md"><code>docs/shape/MCP.md</code></a>.</p>
             </div>
         </div>
     </section>
@@ -992,14 +887,14 @@ Authorization: Bearer &lt;access_token&gt;</code></pre>
                         </div>
 
                             <div class="section-head" style="margin-top:1.4rem;">
-                                <h2 style="font-size:1.25rem;">testapp application examples (full capability map)</h2>
+                                <h2 style="font-size:1.25rem;">Example requests and client behavior</h2>
                             </div>
                             <table class="api-table">
                                 <thead>
                                     <tr>
                                         <th>Capability</th>
                                         <th>Client call</th>
-                                        <th>testapp behavior</th>
+                                        <th>Client behavior</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1248,25 +1143,11 @@ Authorization: Bearer &lt;access_token&gt;</code></pre>
             </div>
         </div>
     </section>
-
-    <section id="contact" class="panel panel-alt contact">
-        <div class="container">
-            <div class="section-head">
-                <p class="kicker">Contact</p>
-                <h2>Build with us.</h2>
-            </div>
-            <p class="contact-copy">Need onboarding, endpoint access, or integration support? Reach out and we will get you connected fast.</p>
-            <div class="contact-links">
-                
-                
-            </div>
-        </div>
-    </section>
     </main>
 
     <footer class="footer">
         <div class="container">
-            <p>ShapeRuntime by Urbidata. Built for practical speed.</p>
+            <p>Shape &mdash; ShapeRuntime and Shape frameworks.</p>
             <p class="host-ip-line">
                 Hosted on <code id="host-ip">resolving&hellip;</code>
             </p>
