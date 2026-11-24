@@ -1,0 +1,72 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Stdio MCP server for a Shape backend.
+ *
+ * Usage:
+ *   php /path/to/shape/bin/shape-mcp /path/to/.env
+ *
+ * Claude Desktop config block:
+ *
+ *   {
+ *     "mcpServers": {
+ *       "myapp": {
+ *         "command": "php",
+ *         "args": [
+ *           "/path/to/myapp/vendor/shape/shape/bin/shape-mcp",
+ *           "/path/to/myapp/.env"
+ *         ]
+ *       }
+ *     }
+ *   }
+ *
+ * The script boots a Shape app via ShapeApp::quickStart() (so all the same
+ * defaults apply: access wildcard, admin_masks, soft-delete detection,
+ * etc.), then enters an MCP JSON-RPC loop on stdin/stdout.
+ *
+ * Default auth context is admin — the user invoked this on their own
+ * machine, so they have full access to their own DB. Set SHAPE_MCP_ROLE
+ * to override (e.g., 'user' for a read-only-flavored session).
+ */
+
+// Locate the runtime + Shape autoload regardless of vendor structure.
+$candidates = [
+    __DIR__ . '/../../../../../shaperuntime/bootstrap.php', // composer install layout
+    __DIR__ . '/../../shaperuntime/bootstrap.php',          // monorepo layout
+];
+foreach ($candidates as $bootstrap) {
+    if (is_file($bootstrap)) {
+        require_once $bootstrap;
+        break;
+    }
+}
+
+spl_autoload_register(static function (string $class): void {
+    if (!str_starts_with($class, 'Shape\\')) {
+        return;
+    }
+    $monorepoSrc = __DIR__ . '/../src/' . str_replace('\\', '/', $class) . '.php';
+    if (is_file($monorepoSrc)) {
+        require_once $monorepoSrc;
+    }
+});
+
+$envPath = $argv[1] ?? '.env';
+if (!is_file($envPath)) {
+    fwrite(STDERR, "shape-mcp: .env not found at '{$envPath}'\n");
+    exit(2);
+}
+
+try {
+    $quick = Shape\ShapeApp::quickStart($envPath);
+} catch (Throwable $e) {
+    fwrite(STDERR, "shape-mcp: failed to boot Shape app — " . $e->getMessage() . "\n");
+    exit(1);
+}
+
+$role = (string)(getenv('SHAPE_MCP_ROLE') ?: 'admin');
+$server = new Shape\Mcp\McpServer($quick->config(), $quick->serviceName(), ['role' => $role]);
+(new Shape\Mcp\StdioTransport($server))->serve();

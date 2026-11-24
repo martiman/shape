@@ -1,0 +1,27 @@
+{
+  "op": "mutation",
+  "payload": {
+    "transaction": true,
+    "mutations": [
+      {
+        "table": "orders",
+        "action": "insert",
+        "data": {
+          "user_id": 1,
+          "total": 199.99,
+          "status": "pending"
+        }
+      },
+      {
+        "table": "order_items",
+        "action": "insert",
+        "data": {
+          "order_id": 1,
+          "product_id": 42,
+          "quantity": 2,
+          "price": 99.99
+        }
+      }
+    ]
+  }
+}

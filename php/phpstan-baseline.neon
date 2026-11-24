@@ -1,0 +1,895 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Parameter \#1 \$array \(non\-empty\-list\<string\>\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: packages/shape/src/Shape/Audit/AuditLogger.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: packages/shape/src/Shape/Generator/ManifestGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\ManifestGenerator\:\:generate\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/ManifestGenerator.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between non\-empty\-array\<string, array\{\}\|array\{description\?\: non\-empty\-string, roles\?\: list\<string\>, maxSize\?\: int, mimeTypes\?\: list\<string\>\}\> and array\{\} will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: packages/shape/src/Shape/Generator/ManifestGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\OpenApiGenerator\:\:buildSchemas\(\) has parameter \$entities with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\OpenApiGenerator\:\:errorResponse\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\OpenApiGenerator\:\:fieldToJsonSchema\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\OpenApiGenerator\:\:generate\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\OpenApiGenerator\:\:jsonBody\(\) has parameter \$schema with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\OpenApiGenerator\:\:jsonBody\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\OpenApiGenerator\:\:jsonResponse\(\) has parameter \$schema with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\OpenApiGenerator\:\:jsonResponse\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\OpenApiGenerator\:\:mutationBody\(\) has parameter \$dataProps with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\OpenApiGenerator\:\:mutationBody\(\) has parameter \$dataRequired with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\OpenApiGenerator\:\:mutationBody\(\) has parameter \$filterProps with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\OpenApiGenerator\:\:mutationBody\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\OpenApiGenerator\:\:mutationResponse\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\OpenApiGenerator\:\:queryBody\(\) has parameter \$paramSchemas with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\OpenApiGenerator\:\:queryBody\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\OpenApiGenerator\:\:queryResponse\(\) has parameter \$rowSchema with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Method Shape\\Generator\\OpenApiGenerator\:\:queryResponse\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between list\{0\: ''Auth'', 1\?\: ''Commands''\|''Generic mask GET''\|''Queries'', 2\?\: ''Commands''\|''Generic mask GET'', 3\?\: ''Commands''\} and array\{\} will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: packages/shape/src/Shape/Generator/OpenApiGenerator.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: packages/shape/src/Shape/Mcp/HttpTransport.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: packages/shape/src/Shape/Mcp/HttpTransport.php
+
+		-
+			message: '#^Method Shape\\Mcp\\McpServer\:\:callCommand\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Mcp/McpServer.php
+
+		-
+			message: '#^Method Shape\\Mcp\\McpServer\:\:callMutate\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Mcp/McpServer.php
+
+		-
+			message: '#^Method Shape\\Mcp\\McpServer\:\:callReadMask\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Mcp/McpServer.php
+
+		-
+			message: '#^Method Shape\\Mcp\\McpServer\:\:errorResult\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Mcp/McpServer.php
+
+		-
+			message: '#^Method Shape\\Mcp\\McpServer\:\:handleInitialize\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Mcp/McpServer.php
+
+		-
+			message: '#^Method Shape\\Mcp\\McpServer\:\:handleResourceTemplatesList\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Mcp/McpServer.php
+
+		-
+			message: '#^Method Shape\\Mcp\\McpServer\:\:handleResourcesList\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Mcp/McpServer.php
+
+		-
+			message: '#^Method Shape\\Mcp\\McpServer\:\:handleResourcesRead\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Mcp/McpServer.php
+
+		-
+			message: '#^Method Shape\\Mcp\\McpServer\:\:handleToolsCall\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Mcp/McpServer.php
+
+		-
+			message: '#^Method Shape\\Mcp\\McpServer\:\:handleToolsList\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Mcp/McpServer.php
+
+		-
+			message: '#^Method Shape\\Mcp\\McpServer\:\:resourceText\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Mcp/McpServer.php
+
+		-
+			message: '#^Method Shape\\Mcp\\McpServer\:\:successResult\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Mcp/McpServer.php
+
+		-
+			message: '#^Offset ''auto_increment'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: packages/shape/src/Shape/Metadata/AutoValidators.php
+
+		-
+			message: '#^Offset ''has_default'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: packages/shape/src/Shape/Metadata/AutoValidators.php
+
+		-
+			message: '#^Offset ''nullable'' on array\{type\: string, nullable\: bool, auto_increment\: bool, has_default\: bool, length\: int\|null\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: packages/shape/src/Shape/Metadata/AutoValidators.php
+
+		-
+			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: packages/shape/src/Shape/Metadata/DatabaseIntrospector.php
+
+		-
+			message: '#^Method Shape\\Metadata\\DatabaseIntrospector\:\:getMysqlColumns\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Metadata/DatabaseIntrospector.php
+
+		-
+			message: '#^Method Shape\\Metadata\\DatabaseIntrospector\:\:getPgsqlColumns\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Metadata/DatabaseIntrospector.php
+
+		-
+			message: '#^Method Shape\\Metadata\\DatabaseIntrospector\:\:getSqliteColumns\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Metadata/DatabaseIntrospector.php
+
+		-
+			message: '#^Method Shape\\Metadata\\DatabaseIntrospector\:\:isStringType\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: packages/shape/src/Shape/Metadata/DatabaseIntrospector.php
+
+		-
+			message: '#^Method Shape\\Metadata\\EntityReader\:\:readEntity\(\) has parameter \$ref with generic class ReflectionClass but does not specify its types\: T$#'
+			identifier: missingType.generics
+			count: 1
+			path: packages/shape/src/Shape/Metadata/EntityReader.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>onDelete" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: packages/shape/src/Shape/Metadata/EntityReader.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>onUpdate" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: packages/shape/src/Shape/Metadata/EntityReader.php
+
+		-
+			message: '#^Method Shape\\Metadata\\FieldMeta\:\:__construct\(\) has parameter \$validators with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Metadata/FieldMeta.php
+
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:buildDatabaseConfig\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:buildFromEntities\(\) has parameter \$config with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:buildFromEntities\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:detectDriver\(\) has parameter \$dbConfig with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:fromDatabase\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:fromEntities\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:loadConfig\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:loadDatabaseBundle\(\) has parameter \$config with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:loadEntitiesFromCache\(\) has parameter \$config with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:mergeValidators\(\) has parameter \$auto with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:mergeValidators\(\) has parameter \$manual with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:mergeValidators\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:resolveAllowlist\(\) has parameter \$config with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:resolveAllowlist\(\) has parameter \$secretTables with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:resolveAllowlist\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:resolveCachePath\(\) has parameter \$config with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:resolveSecretTables\(\) has parameter \$config with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:saveDatabaseBundle\(\) has parameter \$config with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Method Shape\\ShapeApp\:\:saveEntitiesToCache\(\) has parameter \$config with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Offset ''users_lacks…'' on array\{entities\: array\<string, Shape\\Metadata\\EntityMeta\>, admin_masks\: array\<string, array\<string, mixed\>\>, audit_log_table\: string\|null, audit_masks\: array\<string, array\<string, mixed\>\>, users_lacks_password_hash\: bool, auto_users_lookup_column\?\: ''auth0_id''\|''azure_oid''\|''external_id''\|''oid''\|''sub''\|null\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Parameter \#1 \$array \(list\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between mixed and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: packages/shape/src/Shape/ShapeApp.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Match arm comparison between ''le'' and ''le'' is always true\.$#'
+			identifier: match.alwaysTrue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:authorizeManifest\(\) has parameter \$authConfig with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:authorizeManifest\(\) has parameter \$manifestRoles with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:buildManifest\(\) has parameter \$masks with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:buildManifest\(\) has parameter \$shapeData with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:buildManifest\(\) has parameter \$uploads with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:buildManifest\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:buildManifestForFormat\(\) has parameter \$masks with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:buildManifestForFormat\(\) has parameter \$shapeData with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:buildManifestForFormat\(\) has parameter \$uploads with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:buildManifestForFormat\(\) never returns object so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:buildManifestForFormat\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:buildOpenApi\(\) has parameter \$authConfig with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:buildOpenApi\(\) has parameter \$masks with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:buildOpenApi\(\) has parameter \$shapeData with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:buildOpenApi\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:findFkField\(\) has parameter \$shapeData with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:findPkName\(\) has parameter \$shapeData with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:handleODataGet\(\) has parameter \$authConfig with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:handleODataGet\(\) has parameter \$config with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:handleODataGet\(\) has parameter \$masks with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:handleODataGet\(\) has parameter \$shapeData with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:normalizeHeaders\(\) has parameter \$headers with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:parseFilterCondition\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:parseODataFilter\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:serveManifest\(\) has parameter \$authConfig with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:serveManifest\(\) has parameter \$manifestRoles with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:serveManifest\(\) has parameter \$masks with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:serveManifest\(\) has parameter \$shapeData with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:serveManifest\(\) has parameter \$uploads with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:serveMcp\(\) has parameter \$authConfig with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:serveMcp\(\) has parameter \$config with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:serveOpenApi\(\) has parameter \$authConfig with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:serveOpenApi\(\) has parameter \$manifestRoles with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:serveOpenApi\(\) has parameter \$masks with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:serveOpenApi\(\) has parameter \$shapeData with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:serveUpload\(\) has parameter \$authConfig with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\ShapeRouter\:\:serveUpload\(\) has parameter \$config with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/ShapeRouter.php
+
+		-
+			message: '#^Method Shape\\Upload\\UploadManager\:\:authorizeRole\(\) has parameter \$authContext with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Upload/UploadManager.php
+
+		-
+			message: '#^Method Shape\\Upload\\UploadManager\:\:handle\(\) has parameter \$files with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shape/src/Shape/Upload/UploadManager.php
+
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Auth/JwtGuard.php
+
+		-
+			message: '#^Call to function is_string\(\) with non\-empty\-string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 2
+			path: packages/shaperuntime/src/ShapeRuntime/Auth/LoginService.php
+
+		-
+			message: '#^Method ShapeRuntime\\Auth\\LoginService\:\:issueTokenPair\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Auth/LoginService.php
+
+		-
+			message: '#^Result of \|\| is always false\.$#'
+			identifier: booleanOr.alwaysFalse
+			count: 2
+			path: packages/shaperuntime/src/ShapeRuntime/Auth/LoginService.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between non\-empty\-string and '''' will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: packages/shaperuntime/src/ShapeRuntime/Auth/LoginService.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 2
+			path: packages/shaperuntime/src/ShapeRuntime/Auth/OidcVerifier.php
+
+		-
+			message: '#^Property ShapeRuntime\\Auth\\OidcVerifier\:\:\$config type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Auth/OidcVerifier.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/BatchExecutor.php
+
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/BatchExecutor.php
+
+		-
+			message: '#^Method ShapeRuntime\\Core\\BatchExecutor\:\:applyOrderBy\(\) has parameter \$orderby with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/BatchExecutor.php
+
+		-
+			message: '#^Method ShapeRuntime\\Core\\BatchExecutor\:\:assertFieldsExist\(\) has parameter \$requested with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/BatchExecutor.php
+
+		-
+			message: '#^Method ShapeRuntime\\Core\\BatchExecutor\:\:assocToRows\(\) has parameter \$rows with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/BatchExecutor.php
+
+		-
+			message: '#^Method ShapeRuntime\\Core\\BatchExecutor\:\:assocToRows\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/BatchExecutor.php
+
+		-
+			message: '#^Method ShapeRuntime\\Core\\BatchExecutor\:\:readOptions\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/BatchExecutor.php
+
+		-
+			message: '#^Method ShapeRuntime\\Core\\BatchExecutor\:\:readStringListOption\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/BatchExecutor.php
+
+		-
+			message: '#^Method ShapeRuntime\\Core\\BatchExecutor\:\:rowsToAssoc\(\) has parameter \$rows with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/BatchExecutor.php
+
+		-
+			message: '#^Method ShapeRuntime\\Core\\BatchExecutor\:\:rowsToAssoc\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/BatchExecutor.php
+
+		-
+			message: '#^Offset 0 on non\-empty\-list\<array\<string, mixed\>\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/BatchExecutor.php
+
+		-
+			message: '#^Parameter &\$seenRefs by\-ref type of method ShapeRuntime\\Core\\BatchExecutor\:\:executeSingleMutation\(\) expects array\<string, bool\>, array\<bool\> given\.$#'
+			identifier: parameterByRef.type
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/BatchExecutor.php
+
+		-
+			message: '#^Property ShapeRuntime\\Core\\BatchExecutor\:\:\$auditLogger type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/BatchExecutor.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between non\-empty\-list\<array\{field\: string, fn\: string, as\: string\}\> and array\{\} will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/BatchExecutor.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between mixed and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 4
+			path: packages/shaperuntime/src/ShapeRuntime/Core/BatchExecutor.php
+
+		-
+			message: '#^Variable \$filter on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.variable
+			count: 4
+			path: packages/shaperuntime/src/ShapeRuntime/Core/BatchExecutor.php
+
+		-
+			message: '#^Call to function is_callable\(\) with callable\(\)\: mixed will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/CommandExecutor.php
+
+		-
+			message: '#^Method ShapeRuntime\\Core\\CommandContext\:\:__construct\(\) has parameter \$authContext with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/CommandExecutor.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/Database.php
+
+		-
+			message: '#^Call to function is_array\(\) with list\<mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/Database.php
+
+		-
+			message: '#^Offset ''name'' on array\{name\: string, table\?\: string, native_type\?\: string, len\: int, flags\: array\<int, string\>, precision\: int\<0, max\>, pdo_type\: 0\|1\|2\|3\|4\|5\|6\|536870912\|1073741824\|2147483648\} in isset\(\) always exists and is not nullable\.$#'
+			identifier: isset.offset
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/Database.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 2
+			path: packages/shaperuntime/src/ShapeRuntime/Core/ParamSchema.php
+
+		-
+			message: '#^Call to function is_callable\(\) with callable\(\)\: mixed will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Core/ValidatorRegistry.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Http/AdminAuth.php
+
+		-
+			message: '#^Method ShapeRuntime\\Http\\AdminAuth\:\:normalizeHeaders\(\) has parameter \$headers with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Http/AdminAuth.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Http/AppRouter.php
+
+		-
+			message: '#^Method ShapeRuntime\\Http\\AppRouter\:\:normalizeHeaders\(\) has parameter \$headers with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Http/AppRouter.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Http/QueryHandler.php
+
+		-
+			message: '#^Method ShapeRuntime\\Http\\QueryHandler\:\:normalizeHeaders\(\) has parameter \$headers with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: packages/shaperuntime/src/ShapeRuntime/Http/QueryHandler.php

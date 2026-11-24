@@ -1,0 +1,23 @@
+{
+  "name": "shape/shaperuntime",
+  "description": "Lightweight PHP SQL gateway — runtime engine for Shape framework",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Urbidata"
+    }
+  ],
+  "require": {
+    "php": ">=8.2"
+  },
+  "suggest": {
+    "ext-pdo": "Required at runtime for all database access",
+    "ext-pdo_sqlsrv": "PDO driver for Microsoft SQL Server targets"
+  },
+  "autoload": {
+    "psr-4": {
+      "ShapeRuntime\\": "src/ShapeRuntime/"
+    }
+  }
+}

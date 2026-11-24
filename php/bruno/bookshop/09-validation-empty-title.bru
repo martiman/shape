@@ -1,0 +1,46 @@
+meta {
+  name: Validation - Empty Title Rejected
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api.php
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "op": "mutation",
+    "payload": {
+      "mutations": [
+        {
+          "table": "books",
+          "action": "insert",
+          "data": {
+            "title": "",
+            "author_id": 1,
+            "price": 9.99
+          }
+        }
+      ]
+    }
+  }
+}
+
+tests {
+  test("status is 400", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+
+  test("validation error", function() {
+    expect(res.body.error.code).to.equal("VALIDATION_ERROR");
+    expect(res.body.error.message).to.include("title");
+  });
+}

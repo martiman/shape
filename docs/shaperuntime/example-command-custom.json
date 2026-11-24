@@ -1,0 +1,10 @@
+{
+  "op": "command",
+  "payload": {
+    "name": "billing.charge_invoice",
+    "params": {
+      "invoice_id": 9001,
+      "gateway": "stripe"
+    }
+  }
+}

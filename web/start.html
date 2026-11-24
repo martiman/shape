@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shape — your AI ships a working backend before lunch, with SQL Server support</title>
+    <meta name="description" content="Shape is the PHP backend framework where 'have an AI build the API' is the supported path. One file. Schema-driven. Production-grade auth, audit log, MCP server, and support for MySQL, PostgreSQL, SQLite, and SQL Server.">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body.start-page { background: var(--bg); }
+        .pitch-hero {
+            min-height: 70vh;
+            display: flex;
+            align-items: center;
+            padding: 4rem 0 3rem;
+        }
+        .pitch-hero h1 {
+            font-size: clamp(2.2rem, 5vw, 4rem);
+            line-height: 1.05;
+            letter-spacing: -0.02em;
+            margin: 0 0 1.2rem;
+        }
+        .pitch-hero h1 em {
+            font-style: normal;
+            color: var(--cyan);
+        }
+        .pitch-motto {
+            font-family: var(--mono);
+            font-size: 0.78rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--cyan);
+            margin: 0 0 1.1rem;
+        }
+        .pitch-motto-tag {
+            display: block;
+            color: var(--muted);
+            text-transform: none;
+            letter-spacing: normal;
+            font-size: 0.85rem;
+            font-style: italic;
+            margin-top: 0.3rem;
+        }
+        .pitch-hero p.lead {
+            font-size: clamp(1.05rem, 1.8vw, 1.4rem);
+            color: var(--muted);
+            max-width: 52ch;
+            line-height: 1.45;
+            margin: 0 0 2rem;
+        }
+        .pitch-cta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+        }
+        .pitch-cta a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.85rem 1.3rem;
+            border-radius: 999px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.98rem;
+        }
+        .pitch-cta .primary {
+            background: var(--ink);
+            color: #fff;
+        }
+        .pitch-cta .secondary {
+            background: transparent;
+            color: var(--ink);
+            border: 1px solid var(--line);
+        }
+        .pitch-three {
+            padding: 2rem 0 5rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        .pitch-card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 1.6rem 1.6rem 1.4rem;
+            display: flex;
+            flex-direction: column;
+        }
+        .pitch-card .num {
+            font-family: var(--mono);
+            font-size: 0.78rem;
+            letter-spacing: 0.08em;
+            color: var(--cyan);
+            text-transform: uppercase;
+            margin: 0 0 0.6rem;
+        }
+        .pitch-card h2 {
+            font-size: 1.35rem;
+            line-height: 1.2;
+            margin: 0 0 0.7rem;
+        }
+        .pitch-card p {
+            color: var(--muted);
+            font-size: 0.97rem;
+            line-height: 1.55;
+            margin: 0 0 1rem;
+        }
+        .pitch-card pre {
+            margin: auto 0 0;
+            padding: 0.95rem 1rem;
+            background: #0f1530;
+            color: #f4f7ff;
+            border-radius: 12px;
+            font-family: var(--mono);
+            font-size: 0.82rem;
+            line-height: 1.5;
+            overflow-x: auto;
+        }
+        .pitch-card pre code { color: inherit; }
+        .pitch-stacks {
+            padding: 3rem 0 3.5rem;
+            border-top: 1px solid var(--line);
+            border-bottom: 1px solid var(--line);
+            background: var(--bg-soft);
+        }
+        .pitch-stacks h2 {
+            font-size: clamp(1.3rem, 2.2vw, 1.7rem);
+            margin: 0 0 0.4rem;
+        }
+        .pitch-stacks p.sub {
+            color: var(--muted);
+            margin: 0 0 1.6rem;
+            max-width: 60ch;
+        }
+        .stack-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 0.8rem;
+        }
+        .stack {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 0.95rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .stack .name {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--ink);
+        }
+        .stack .status {
+            font-family: var(--mono);
+            font-size: 0.78rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .stack.shipped .status { color: var(--cyan); }
+        .stack.roadmap .status { color: var(--orange); }
+        .switch-block {
+            margin-top: 2.4rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--line);
+        }
+        .switch-block h3 {
+            font-size: clamp(1.2rem, 2vw, 1.55rem);
+            margin: 0 0 0.4rem;
+        }
+        .switch-block p.sub {
+            color: var(--muted);
+            margin: 0 0 1.2rem;
+            max-width: 60ch;
+        }
+        .switch-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0 0 1.4rem;
+            font-size: 0.92rem;
+        }
+        .switch-table th,
+        .switch-table td {
+            text-align: left;
+            padding: 0.55rem 0.75rem;
+            border-bottom: 1px solid var(--line);
+            vertical-align: top;
+        }
+        .switch-table th {
+            color: var(--ink);
+            font-weight: 600;
+            background: rgba(34, 52, 111, 0.05);
+        }
+        .switch-table td { color: var(--muted); }
+        .switch-table code {
+            font-family: var(--mono);
+            font-size: 0.85em;
+            background: rgba(34, 52, 111, 0.08);
+            padding: 0.05rem 0.35rem;
+            border-radius: 4px;
+            color: var(--ink);
+        }
+        .switch-steps {
+            counter-reset: switch-step;
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.8rem;
+        }
+        .switch-steps li {
+            counter-increment: switch-step;
+            position: relative;
+            padding: 0.85rem 1rem 0.85rem 2.6rem;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            font-size: 0.92rem;
+            color: var(--ink);
+            line-height: 1.4;
+        }
+        .switch-steps li::before {
+            content: counter(switch-step);
+            position: absolute;
+            left: 0.85rem;
+            top: 0.85rem;
+            width: 1.4rem;
+            height: 1.4rem;
+            border-radius: 50%;
+            background: var(--cyan);
+            color: #fff;
+            font-family: var(--mono);
+            font-size: 0.78rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+        .switch-steps li code {
+            font-family: var(--mono);
+            font-size: 0.85em;
+            background: rgba(34, 52, 111, 0.08);
+            padding: 0.05rem 0.3rem;
+            border-radius: 3px;
+        }
+        .switch-cta {
+            margin: 0;
+            font-size: 0.95rem;
+        }
+        .switch-cta a {
+            color: var(--ink);
+            font-weight: 600;
+            text-decoration: none;
+            border-bottom: 2px solid var(--cyan);
+        }
+        .pitch-personas {
+            background: linear-gradient(135deg, #0f1530 0%, #1a2752 50%, #2a3a78 100%);
+            color: #f4f7ff;
+            padding: 4rem 0 4.5rem;
+            margin: 0 0 0;
+        }
+        .pitch-personas h2 {
+            color: #fff;
+            font-size: clamp(1.4rem, 2.5vw, 2rem);
+            margin: 0 0 0.6rem;
+        }
+        .pitch-personas p.sub {
+            color: rgba(244, 247, 255, 0.78);
+            margin: 0 0 2rem;
+            max-width: 56ch;
+        }
+        .persona-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.2rem;
+        }
+        .persona {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            padding: 1.4rem 1.4rem 1.2rem;
+        }
+        .persona h3 {
+            color: #ffd38a;
+            font-size: 0.85rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin: 0 0 0.6rem;
+        }
+        .persona p {
+            color: rgba(244, 247, 255, 0.9);
+            font-size: 1rem;
+            line-height: 1.5;
+            margin: 0;
+        }
+        .pitch-foot {
+            padding: 3rem 0;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+        .pitch-foot a { color: var(--ink); }
+    </style>
+</head>
+<body class="start-page">
+    <div class="bg-noise" aria-hidden="true"></div>
+    <div class="glow glow-a" aria-hidden="true"></div>
+    <div class="glow glow-b" aria-hidden="true"></div>
+
+    <main>
+        <section class="pitch-hero">
+            <div class="container">
+                <p class="pitch-motto">
+                    The framework your AI was waiting for.
+                    <span class="pitch-motto-tag">Schema-driven. Three lines of PHP. Production-grade by the second request.</span>
+                </p>
+                <h1>Your AI ships a working backend <em>before lunch.</em></h1>
+                <p class="lead">Shape is the first backend framework where "have an AI build the API" is the <strong>supported path</strong>, not a hack. Schema-driven. Production-grade. One file.</p>
+                <div class="pitch-cta">
+                    <a class="primary" href="https://github.com/martiman/shape/blob/main/AGENTS.md" target="_blank" rel="noopener">Drop AGENTS.md into your AI →</a>
+                    <a class="secondary" href="https://github.com/martiman/shape" target="_blank" rel="noopener">See the code on GitHub</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="container">
+            <div class="pitch-three">
+                <article class="pitch-card">
+                    <p class="num">01 — One file</p>
+                    <h2>That's the whole backend.</h2>
+                    <p>Point Shape at MySQL, PostgreSQL, SQLite, or SQL Server. The framework auto-generates JSON, OData, REST, OpenAPI, MCP, and LLM-tool definitions from your schema. No entity classes. No controllers. No DTO layer.</p>
+                    <pre><code>&lt;?php
+require __DIR__ . '/../vendor/autoload.php';
+Shape\ShapeApp::quickStart(__DIR__ . '/../.env')-&gt;serve();</code></pre>
+                </article>
+
+                <article class="pitch-card">
+                    <p class="num">02 — One AGENTS.md</p>
+                    <h2>Your AI's onboarding doc.</h2>
+                    <p>~5k tokens of framework conventions. Drop into Claude / ChatGPT / Cursor / Codex once — the AI's defaults are now Shape-shaped. Errors are self-documenting (<code>expected</code> / <code>example</code> / <code>hint</code>); the manifest is one fetch away.</p>
+                    <pre><code>curl https://raw.githubusercontent.com/\
+martiman/shape/main/AGENTS.md \
+  | pbcopy
+# Paste into your AI of choice.</code></pre>
+                </article>
+
+                <article class="pitch-card">
+                    <p class="num">03 — Production by default</p>
+                    <h2>Not behind a paywall.</h2>
+                    <p>JWT + OIDC (Entra/Auth0/Okta), audit log, soft-delete, audit columns, SQL-bounded pagination, ETag/Cache-Control, MCP server, OpenAPI — every one detected by convention or shipped in the box. Zero opt-in needed.</p>
+                    <pre><code># What you don't have to write:
+- routes        - audit log
+- auth          - soft-delete
+- DTOs          - pagination
+- MCP server    - cache headers</code></pre>
+                </article>
+            </div>
+        </section>
+
+        <section class="pitch-stacks">
+            <div class="container">
+                <h2>Not just PHP. Shape is a pattern, not a single stack.</h2>
+                <p class="sub">A team picking Shape on PHP today isn't betting on a language — the same conventions and manifest shape ship across runtimes as the team grows, and the same database story now spans MySQL, PostgreSQL, SQLite, and SQL Server.</p>
+                <div class="stack-row">
+                    <article class="stack shipped">
+                        <span class="name">PHP 8.2+</span>
+                        <span class="status">Reference · Shipping</span>
+                    </article>
+                    <article class="stack shipped">
+                        <span class="name">.NET</span>
+                        <span class="status">Shipping</span>
+                    </article>
+                    <article class="stack roadmap">
+                        <span class="name">TypeScript</span>
+                        <span class="status">Roadmap</span>
+                    </article>
+                    <article class="stack roadmap">
+                        <span class="name">Python</span>
+                        <span class="status">Roadmap</span>
+                    </article>
+                    <article class="stack roadmap">
+                        <span class="name">Go</span>
+                        <span class="status">Roadmap</span>
+                    </article>
+                </div>
+
+                <div class="switch-block">
+                    <h3>Switch your stack without rewriting your app.</h3>
+                    <p class="sub">PHP and .NET share the substrate, not just the brand. The same <code>config/shape.json</code> runs on either runtime. The same database schema, manifest, OpenAPI, MCP tools, and JWT tokens come out the other end. Switching is a deployment change, not a rewrite.</p>
+                    <table class="switch-table">
+                        <thead>
+                            <tr><th>What stays the same</th><th>Why it just works</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Database schema + auto-detect conventions</td><td>Both runtimes read <code>deleted_at</code>, <code>audit_log</code>, <code>users_lookup_column</code> the same way across MySQL, PostgreSQL, SQLite, and SQL Server</td></tr>
+                            <tr><td><code>config/shape.json</code> (masks, access, DSN, OIDC presets)</td><td>Verbatim — no translation step</td></tr>
+                            <tr><td><code>?manifest</code> and <code>?openapi</code> JSON</td><td>Byte-compatible; AI agents and SDK generators don't notice</td></tr>
+                            <tr><td><code>?mcp</code> server + tool definitions</td><td>Same JSON-RPC protocol; Claude Desktop config unchanged</td></tr>
+                            <tr><td>JWT tokens</td><td>Same signing; sessions survive the switch</td></tr>
+                            <tr><td>REST / OData / generic-mask URLs</td><td>Same paths; frontend code unchanged</td></tr>
+                        </tbody>
+                    </table>
+                    <ol class="switch-steps">
+                        <li>Install the new runtime alongside the old.</li>
+                        <li>Point it at the same <code>config/shape.json</code> and database.</li>
+                        <li>Diff <code>?manifest</code> — confirm parity.</li>
+                        <li>Switch traffic at DNS or load balancer. Reverse to roll back.</li>
+                    </ol>
+                    <p class="switch-cta"><a href="migration.html">Read the full migration guide →</a></p>
+                </div>
+            </div>
+        </section>
+
+        <section class="pitch-personas">
+            <div class="container">
+                <h2>Three audiences. One fit.</h2>
+                <p class="sub">A framework that earns its place on every desk in the room.</p>
+                <div class="persona-row">
+                    <article class="persona">
+                        <h3>The developer</h3>
+                        <p>Write less. Debug less. Ship sooner. Your AI agent now produces working PHP on the first try because the framework has stripped away the parts AIs get wrong.</p>
+                    </article>
+                    <article class="persona">
+                        <h3>The CTO / stakeholder</h3>
+                        <p>Backend MVPs in days, not weeks. Compliance-grade audit trail and role-based access on day one. One entry point makes scope-creep easy to govern.</p>
+                    </article>
+                    <article class="persona">
+                        <h3>The AI agent</h3>
+                        <p>Token-frugal manifest. Role-filtered <code>tools/list</code>. Errors that tell you how to fix the call. Every surface designed for tokens, not humans.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <footer class="pitch-foot">
+            <div class="container">
+                <p>Read the <a href="https://github.com/martiman/shape/blob/main/START-HERE.md" target="_blank" rel="noopener">90-second start</a> · Browse the <a href="index.html">full architecture page</a> · See the <a href="migration.html">PHP ↔ .NET migration guide</a> · <a href="https://github.com/martiman/shape/blob/main/STATUS.md" target="_blank" rel="noopener">Roadmap</a></p>
+                <p class="host-ip-line">
+                    Hosted on <code id="host-ip">resolving&hellip;</code>
+                </p>
+            </div>
+        </footer>
+    </main>
+    <script>
+    // Server's actual IP comes from the sidecar `ip.php` endpoint, which
+    // reads $_SERVER['SERVER_ADDR'] (or falls back to
+    // gethostbyname(gethostname())). One-line plain-text response, no cache.
+    (function () {
+        var el = document.getElementById('host-ip');
+        if (!el) return;
+        fetch('ip.php', { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.text() : 'unresolved'; })
+            .then(function (txt) { el.textContent = (txt || 'unknown').trim(); })
+            .catch(function () { el.textContent = 'unresolved'; });
+    })();
+    </script>
+</body>
+</html>

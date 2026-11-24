@@ -1,0 +1,25 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api.php
+  body: none
+  auth: none
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("engine is shape", function() {
+    expect(res.body.engine).to.equal("shape");
+  });
+
+  test("service is bookshop", function() {
+    expect(res.body.service).to.equal("bookshop");
+  });
+}

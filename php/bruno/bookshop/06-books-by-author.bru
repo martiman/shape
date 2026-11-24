@@ -1,0 +1,41 @@
+meta {
+  name: Books by Author (FK auto-mask)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api.php
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "op": "query",
+    "payload": {
+      "queries": [
+        {
+          "ref": "herbert_books",
+          "sql": "books.byAuthorId",
+          "params": { "author_id": 1 }
+        }
+      ]
+    }
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("returns 2 Herbert books", function() {
+    expect(res.body.results[0].count).to.equal(2);
+  });
+}

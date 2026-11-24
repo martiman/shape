@@ -1,0 +1,37 @@
+{
+  "op": "mutation",
+  "payload": {
+    "mutations": [
+      {
+        "table": "products",
+        "action": "insert",
+        "ref": "new_product",
+        "data": {
+          "name": "Widget Pro",
+          "price": 99.99,
+          "category": "electronics",
+          "in_stock": true
+        }
+      },
+      {
+        "table": "products",
+        "action": "update",
+        "ref": "update_price",
+        "filter": {
+          "id": 42
+        },
+        "data": {
+          "price": 89.99
+        }
+      },
+      {
+        "table": "audit_logs",
+        "action": "delete",
+        "ref": "cleanup",
+        "filter": {
+          "created_at__lt": "2025-01-01"
+        }
+      }
+    ]
+  }
+}

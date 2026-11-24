@@ -1,0 +1,23 @@
+{
+  "name": "shape/shape",
+  "description": "Shape your data, the framework builds the API. Entities, DB introspection, OData GET, OpenAPI.",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Urbidata"
+    }
+  ],
+  "require": {
+    "php": ">=8.2",
+    "shape/shaperuntime": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Shape\\": "src/Shape/"
+    }
+  },
+  "bin": [
+    "bin/shape-mcp"
+  ]
+}

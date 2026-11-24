@@ -1,0 +1,23 @@
+# Shape
+
+> Shape is a PHP backend framework optimized for AI agents building APIs. Point it at a database; get a complete REST/JSON API, OData GET surface, machine-readable manifest, OpenAPI spec, LLM tool definitions, and a built-in MCP server — without writing entity classes, scaffolding, or per-table boilerplate. Self-documenting errors carry `expected` + `example` so retries don't burn context. The single canonical agent-facing entry point is AGENTS.md.
+
+## Agent guide
+
+- [AGENTS.md](AGENTS.md): The one file an AI agent should read before doing anything. Install, conventions, MCP, error envelope, common mistakes, cheat sheet — under 5k tokens by design.
+
+## Deep documentation
+
+- [DB-First mode](../docs/shape/DB-FIRST.md): Configuration reference. `access` policy, soft-delete by `deleted_at` convention, secret tables, schema-driven validators, `quickStart()` defaults, auto-SQLite.
+- [MCP server](../docs/shape/MCP.md): Built-in Model Context Protocol server. Stdio for Claude Desktop / Cursor / Cline, streamable-HTTP for hosted backends. Auth-aware `tools/list`, the `shape://README.md` resource that replaces exploratory tool calls.
+- [Manifest API](../docs/shape/MANIFEST-API.md): Manifest shape, LLM tool-call format (Anthropic + OpenAI), self-documenting error envelope.
+- [Why Shape](../docs/shape/WHY-SHAPE.md): Architectural case for AI-built backends. SQL-as-contract, DB-first default, convention over configuration, self-describing at every layer, driver-portable.
+
+## Strategic / project
+
+- [Status & Roadmap](../STATUS.md): What's implemented in both PHP and .NET, and what's planned — one cross-language matrix, ranked by AI-token impact.
+
+## Optional
+
+- [Architecture](../docs/shape/ARCHITECTURE.md): How the runtime is structured beneath the framework.
+- [Spec](../docs/shape/SPEC.md): Reference grammar for the JSON request envelope.

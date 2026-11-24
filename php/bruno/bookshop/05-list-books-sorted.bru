@@ -1,0 +1,51 @@
+meta {
+  name: List Books (sorted by price, paginated)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api.php
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "op": "query",
+    "payload": {
+      "queries": [
+        {
+          "ref": "books",
+          "sql": "books.list",
+          "params": {},
+          "options": {
+            "orderby": [{ "field": "price", "dir": "desc" }],
+            "top": 3,
+            "skip": 0,
+            "count": true
+          }
+        }
+      ]
+    }
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("returns max 3 books", function() {
+    expect(res.body.results[0].count).to.be.at.most(3);
+  });
+
+  test("total_count is 5", function() {
+    expect(res.body.results[0].total_count).to.equal(5);
+  });
+}

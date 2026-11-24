@@ -1,0 +1,18 @@
+{
+  "op": "mutation",
+  "payload": {
+    "mutations": [
+      {
+        "table": "products",
+        "action": "update",
+        "filter": {
+          "id": 42
+        },
+        "data": {
+          "price": 109.99,
+          "stock": 12
+        }
+      }
+    ]
+  }
+}

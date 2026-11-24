@@ -1,0 +1,36 @@
+meta {
+  name: Auth - Login Admin
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api.php
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "op": "auth.token",
+    "payload": {
+      "email": "{{loginEmail}}",
+      "password": "{{loginPassword}}"
+    }
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("returns tokens", function() {
+    expect(res.body).to.have.property("access_token");
+    bru.setVar("jwtToken", res.body.access_token);
+  });
+}

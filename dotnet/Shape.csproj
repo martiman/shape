@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Shape</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+
+    <!-- NuGet package metadata -->
+    <PackageId>Shape</PackageId>
+    <Version>0.6.2</Version>
+    <Authors>Shape</Authors>
+    <Description>Shape — entity-driven .NET backend with mask-based query/mutation/command runtime, OIDC, multi-driver SQL (MySQL/PostgreSQL/SQLite/SQL Server via Dapper), audit logging, file uploads, DB-first introspection, and a built-in MCP server. Drop into any ASP.NET Core minimal-API host.</Description>
+    <PackageReleaseNotes>0.6.2 — Row-level security by dimension (row scopes). Generalized scopes config binds any dimension column (department / branch / cost-center) to a caller claim: scoped/unscoped mask variants (per-scope unscoped_roles; unscoped-ness is not transitive), INSERT stamping + UPDATE/DELETE guard rejecting cross-scope writes with SCOPE_MISMATCH / SCOPE_REQUIRED (+ scope), multi-valued memberships binding as IN, and AUTH_INVALID on pre-feature tokens. Manifest emits entities[].rowScopes and mask row_scopes {multi}. Tenancy is now the built-in special case of this machinery (TenancyConfig + TenancyResolver). Cross-stack parity verified against PHP. 0.6.1 — Microsoft SQL Server (MSSQL) as a fourth driver alongside MySQL/PostgreSQL/SQLite: DbDriver.Mssql, bracket [ ] identifier quoting, sqlsrv/mssql/sqlserver DSN prefixes (Server=host,port + Encrypt/TrustServerCertificate), OFFSET/FETCH pagination with the ORDER BY (SELECT NULL) shim, SCOPE_IDENTITY insert-id, INFORMATION_SCHEMA + sys.extended_properties introspection (identity, MS_Description, bit/nvarchar/uniqueidentifier/datetime2 type mapping), and 2627/2601 unique-violation mapping. 0.6.0 — design-time signal density. Description on Entity / Column attributes, plumbed through EntityMeta / FieldMeta to the manifest, OpenAPI tag descriptions and schema property descriptions, and LLM tool descriptions. DB-first introspection reads pg_description (Postgres) and INFORMATION_SCHEMA TABLE_COMMENT / COLUMN_COMMENT (MySQL) so existing schemas surface their docs automatically. New WritableMode (full / append_only / no_delete / none) replaces the binary writable flag for audit / event / log tables — BatchExecutor rejects forbidden actions with WRITABLE_MODE_FORBIDDEN, manifest emits the resolved mode. New [Unique(columns)] attribute + DB-first introspection of UNIQUE constraints surfaced as entities[].uniqueConstraints in the manifest. 0.5.0 still in scope: ShapeApp.FromEnv / ShapeApp.Run. 0.4.0: sqlFile, net10.0. 0.3.0: per-table role gates, :param rewrite, JSON loader, auto JWT secret, auth shorthand, OIDC lookup auto-detect, DSN translator, Cloud Run guide.</PackageReleaseNotes>
+    <PackageTags>shape;mcp;backend;mask;runtime;crud;oidc;dapper;sqlite;postgres;mysql;sqlserver;mssql</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryType>git</RepositoryType>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="src/**/*.cs" />
+    <None Include="README.md" Pack="true" PackagePath="\" Condition="Exists('README.md')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.66" />
+    <PackageReference Include="MySqlConnector" Version="2.4.0" />
+    <PackageReference Include="Npgsql" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.3" />
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+  </ItemGroup>
+
+</Project>

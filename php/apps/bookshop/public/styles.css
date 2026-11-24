@@ -1,0 +1,26 @@
+body { background: #f8f9fa; }
+.navbar-brand { font-weight: 700; letter-spacing: .5px; }
+.stat-card { text-align: center; padding: 1.2rem .8rem; }
+.stat-number { font-size: 1.8rem; font-weight: 700; }
+.stat-label { font-size: .85rem; color: #6c757d; }
+
+.book-row { cursor: pointer; transition: background .15s; }
+.book-row:hover { background: #e9ecef !important; }
+
+.rating-stars { color: #ffc107; letter-spacing: 2px; }
+.stock-ok { color: #198754; }
+.stock-low { color: #dc3545; }
+.stock-zero { color: #dc3545; font-weight: 600; }
+
+.sort-header { cursor: pointer; user-select: none; white-space: nowrap; }
+.sort-header:hover { color: #0d6efd; }
+
+.detail-back { cursor: pointer; }
+.detail-back:hover { text-decoration: underline; }
+
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 1040; }
+.modal-dialog { position: fixed; inset: 0; z-index: 1050; display: flex; align-items: center; justify-content: center; }
+.modal-content { background: #fff; border-radius: .5rem; width: 100%; max-width: 520px; box-shadow: 0 .5rem 1rem rgba(0,0,0,.15); }
+
+.author-card { transition: box-shadow .15s; }
+.author-card:hover { box-shadow: 0 .25rem .75rem rgba(0,0,0,.1); }

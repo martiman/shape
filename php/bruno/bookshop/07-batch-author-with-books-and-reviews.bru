@@ -1,0 +1,59 @@
+meta {
+  name: Batch - Author → Books → Reviews
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api.php
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "op": "query",
+    "payload": {
+      "queries": [
+        {
+          "ref": "author",
+          "sql": "authors.get",
+          "params": { "id": 1 }
+        },
+        {
+          "ref": "books",
+          "sql": "books.byAuthorId",
+          "params": { "author_id": { "ref": "author", "value": "id" } }
+        },
+        {
+          "ref": "reviews",
+          "sql": "reviews.getMany",
+          "params": { "ids": { "ref": "books", "list": "id" } }
+        }
+      ]
+    }
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("returns 3 result sets", function() {
+    expect(res.body.results.length).to.equal(3);
+  });
+
+  test("author found", function() {
+    expect(res.body.results[0].count).to.equal(1);
+  });
+
+  test("books found", function() {
+    expect(res.body.results[1].count).to.equal(2);
+  });
+}

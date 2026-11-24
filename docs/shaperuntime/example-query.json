@@ -1,0 +1,43 @@
+{
+  "op": "query",
+  "payload": {
+    "queries": [
+      {
+        "ref": "order",
+        "sql": "orderById",
+        "params": { "id": 42 }
+      },
+      {
+        "ref": "items",
+        "sql": "itemsByOrderId",
+        "params": {
+          "order_id": { "ref": "order", "value": "id" }
+        },
+        "options": {
+          "orderby": [
+            { "field": "id", "dir": "asc" }
+          ],
+          "top": 50,
+          "skip": 0,
+          "count": true
+        }
+      },
+      {
+        "ref": "stockSummary",
+        "sql": "stockByProductIds",
+        "params": {
+          "product_ids": { "ref": "items", "list": "product_id" }
+        },
+        "options": {
+          "groupby": ["in_stock"],
+          "aggregate": [
+            { "fn": "count", "as": "items_count" }
+          ],
+          "orderby": [
+            { "field": "in_stock", "dir": "desc" }
+          ]
+        }
+      }
+    ]
+  }
+}

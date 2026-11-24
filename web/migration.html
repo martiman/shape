@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shape — switch your stack between PHP and .NET without a rewrite, with SQL Server support</title>
+    <meta name="description" content="The same config/shape.json runs on either runtime. The same database, manifest, OpenAPI, MCP tools, and JWT tokens come out the other end. Switching from PHP to .NET (or back) is a deployment change, not a rewrite, and both runtimes support MySQL, PostgreSQL, SQLite, and SQL Server.">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body.migration-page { background: var(--bg); }
+        .mig-hero {
+            padding: 3.5rem 0 2.5rem;
+            border-bottom: 1px solid var(--line);
+            background: linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 100%);
+        }
+        .mig-hero h1 {
+            font-size: clamp(2rem, 4.5vw, 3.4rem);
+            line-height: 1.08;
+            letter-spacing: -0.02em;
+            margin: 0 0 1rem;
+        }
+        .mig-hero p.lead {
+            font-size: clamp(1.05rem, 1.5vw, 1.25rem);
+            color: var(--muted);
+            max-width: 64ch;
+            line-height: 1.5;
+            margin: 0;
+        }
+        .mig-hero p.lead code {
+            font-family: var(--mono);
+            font-size: 0.9em;
+            background: rgba(34, 52, 111, 0.08);
+            padding: 0.05rem 0.35rem;
+            border-radius: 4px;
+            color: var(--ink);
+        }
+        .mig-section {
+            padding: 3rem 0;
+            border-bottom: 1px solid var(--line);
+        }
+        .mig-section h2 {
+            font-size: clamp(1.4rem, 2.4vw, 1.9rem);
+            margin: 0 0 0.6rem;
+        }
+        .mig-section p.sub {
+            color: var(--muted);
+            max-width: 64ch;
+            margin: 0 0 1.6rem;
+            line-height: 1.55;
+        }
+        .mig-section table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.94rem;
+            margin: 0 0 1rem;
+        }
+        .mig-section th,
+        .mig-section td {
+            text-align: left;
+            padding: 0.7rem 0.85rem;
+            border-bottom: 1px solid var(--line);
+            vertical-align: top;
+        }
+        .mig-section th {
+            font-weight: 600;
+            background: rgba(34, 52, 111, 0.05);
+            color: var(--ink);
+        }
+        .mig-section td { color: var(--muted); }
+        .mig-section code {
+            font-family: var(--mono);
+            font-size: 0.86em;
+            background: rgba(34, 52, 111, 0.08);
+            padding: 0.05rem 0.35rem;
+            border-radius: 4px;
+            color: var(--ink);
+        }
+        .mig-steps {
+            counter-reset: mig-step;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+        }
+        .mig-steps li {
+            counter-increment: mig-step;
+            position: relative;
+            padding: 1.1rem 1.1rem 1.1rem 3.2rem;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: var(--ink);
+        }
+        .mig-steps li strong { color: var(--ink); display: block; margin-bottom: 0.3rem; font-size: 1rem; }
+        .mig-steps li::before {
+            content: counter(mig-step);
+            position: absolute;
+            left: 1rem;
+            top: 1.1rem;
+            width: 1.6rem;
+            height: 1.6rem;
+            border-radius: 50%;
+            background: var(--cyan);
+            color: #fff;
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+        .mig-code-pair {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.2rem;
+            margin: 1.4rem 0;
+        }
+        .mig-code-card {
+            background: #0f1530;
+            border-radius: 14px;
+            padding: 1rem 1.2rem 1.2rem;
+            color: #f4f7ff;
+            display: flex;
+            flex-direction: column;
+        }
+        .mig-code-card .lang {
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #ffd38a;
+            margin: 0 0 0.6rem;
+        }
+        .mig-code-card pre {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            color: #f4f7ff;
+            font-family: var(--mono);
+            font-size: 0.84rem;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre;
+        }
+        .mig-code-card pre code { color: inherit; background: transparent; padding: 0; }
+        .mig-config-block {
+            background: #0f1530;
+            color: #f4f7ff;
+            padding: 1.1rem 1.2rem;
+            border-radius: 14px;
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            line-height: 1.55;
+            overflow-x: auto;
+            margin: 0;
+        }
+        /* Critical: the nested <code> inherits the page-global `code`
+           styling (dark text on a pill background). Override here so the
+           JSON inside the dark block renders as light text on its dark
+           parent — no inline style required. */
+        .mig-config-block code {
+            color: #f4f7ff;
+            background: transparent;
+            padding: 0;
+            font-family: inherit;
+            font-size: inherit;
+        }
+        @media (max-width: 880px) {
+            .mig-code-pair { grid-template-columns: 1fr; }
+        }
+        .mig-faq {
+            display: grid;
+            gap: 1rem;
+        }
+        .mig-faq-item {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 1rem 1.2rem;
+        }
+        .mig-faq-item h3 {
+            font-size: 1rem;
+            margin: 0 0 0.5rem;
+            color: var(--ink);
+        }
+        .mig-faq-item p {
+            color: var(--muted);
+            margin: 0;
+            font-size: 0.94rem;
+            line-height: 1.55;
+        }
+        .mig-foot {
+            padding: 2.5rem 0 3rem;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+        .mig-foot a {
+            color: var(--ink);
+            font-weight: 600;
+            text-decoration: none;
+            border-bottom: 2px solid var(--cyan);
+        }
+    </style>
+</head>
+<body class="migration-page">
+    <div class="bg-noise" aria-hidden="true"></div>
+    <div class="glow glow-a" aria-hidden="true"></div>
+
+    <header class="topbar">
+        <div class="container">
+            <a class="brand" href="index.html">ShapeRuntime</a>
+            <nav aria-label="Main navigation">
+                <ul class="nav-menu">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="start.html">90-second pitch</a></li>
+                    <li><a href="https://github.com/martiman/shape" target="_blank" rel="noopener">GitHub</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+
+    <section class="mig-hero">
+        <div class="container">
+            <h1>Switch your stack between PHP and .NET <em style="font-style: normal; color: var(--cyan);">without rewriting your app.</em></h1>
+            <p class="lead">PHP and .NET share the substrate, not just the brand. The same <code>config/shape.json</code> runs on either runtime. The same database schema, manifest, OpenAPI, MCP tools, and JWT tokens come out the other end across MySQL, PostgreSQL, SQLite, and SQL Server. Switching is a <strong>deployment change</strong>, not a rewrite.</p>
+        </div>
+    </section>
+
+    <section class="mig-section">
+        <div class="container">
+            <h2>What stays the same when you switch</h2>
+            <p class="sub">Eight surfaces are byte-compatible across the two runtimes. Verified against production deployments.</p>
+            <table>
+                <thead>
+                    <tr><th>Surface</th><th>Why it just works</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Database schema + auto-detect conventions</td><td>Both runtimes read <code>deleted_at</code>, <code>audit_log</code>, <code>users_lookup_column</code>, <code>created_at/by</code>, <code>updated_at/by</code> the same way across MySQL, PostgreSQL, SQLite, and SQL Server. Schema is the contract.</td></tr>
+                    <tr><td><code>config/shape.json</code> (masks, access map, DSN, OIDC presets, file uploads, auth)</td><td>Verbatim — no translation step. The .NET <code>ShapeApp.FromDatabase</code> reads the same JSON the PHP <code>ShapeApp::fromDatabase</code> reads.</td></tr>
+                    <tr><td>External <code>.sql</code> mask files</td><td>Referenced via <code>"sqlFile": "queries/topAuthors.sql"</code> in either runtime. <code>:param</code> placeholders are normalized identically.</td></tr>
+                    <tr><td><code>?manifest</code> JSON output</td><td>Byte-compatible. AI agents trained against one work against the other unchanged. Entity list, mask params, default limits, audit columns, soft-delete flags — all identical shape.</td></tr>
+                    <tr><td><code>?openapi</code> spec output</td><td>Same paths, same tags, same <code>x-tagGroups</code>, same examples. SDK generators (<code>openapi-generator</code>) produce equivalent clients.</td></tr>
+                    <tr><td><code>?mcp</code> server + stdio</td><td>Same JSON-RPC protocol, same tool definitions, same resource URIs (<code>shape://manifest</code>, <code>shape://README.md</code>). Claude Desktop / Cursor / Cline configs unchanged.</td></tr>
+                    <tr><td>JWT tokens (HS256 + OIDC RS256)</td><td>Same signing, same OIDC presets (entra/auth0/okta/google/cognito). Sessions survive the runtime switch if you keep the secret. OIDC tokens come from the IdP regardless.</td></tr>
+                    <tr><td>REST / OData / generic-mask URLs</td><td><code>GET /api.php/&lt;entity&gt;/&lt;id&gt;</code> works identically. Same <code>?$top</code> / <code>?$skip</code> / <code>?$orderby</code> semantics. Same <code>/api.php/_/&lt;mask&gt;</code> generic path.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="mig-section">
+        <div class="container">
+            <h2>Migration in four steps</h2>
+            <p class="sub">A straightforward deployment exercise — no data migration, no code rewrite, and no database-dialect rewrite when you move across the supported engines.</p>
+            <ol class="mig-steps">
+                <li>
+                    <strong>Install the new runtime</strong>
+                    Stand up the .NET (or PHP) build alongside your existing one. Same machine works; separate hosts work; Docker container works. The two don't need to know about each other.
+                </li>
+                <li>
+                    <strong>Point at the same config and database</strong>
+                    Pass the same <code>config/shape.json</code> path. Use the same DSN, JWT secret, OIDC config. Both runtimes are read-only on those inputs.
+                </li>
+                <li>
+                    <strong>Diff the surfaces</strong>
+                    <code>curl -s OLD/api.php?manifest | jq -S</code> versus the new runtime's. Same for <code>?openapi</code> and a sample <code>?op=query</code>. Should be byte-equivalent except for the runtime-identity field. Frontend smoke-test passes unchanged.
+                </li>
+                <li>
+                    <strong>Switch traffic</strong>
+                    Flip the DNS record, the load balancer pool, or the reverse-proxy <code>upstream</code> directive. Reverse to roll back. The two runtimes can also coexist in production behind a weighted split for staged rollout.
+                </li>
+            </ol>
+        </div>
+    </section>
+
+    <section class="mig-section">
+        <div class="container">
+            <h2>The same JSON config, two runtimes</h2>
+            <p class="sub">Below: identical <code>config/shape.json</code> consumed by the PHP entry point and the .NET entry point. The application layer is <em>this</em> small, whether the DSN is <code>mysql:</code>, <code>pgsql:</code>, <code>sqlite:</code>, or <code>sqlsrv:</code>.</p>
+
+            <div class="mig-code-pair">
+                <article class="mig-code-card">
+                    <p class="lang">PHP — <code>public/api.php</code></p>
+<pre><code>&lt;?php
+require __DIR__ . '/../vendor/autoload.php';
+
+Shape\ShapeApp::run(__DIR__ . '/..');
+// Discovers config/database.php (or config/shape.json),
+// merges env.local.php, dispatches to ShapeRouter::run.</code></pre>
+                </article>
+
+                <article class="mig-code-card">
+                    <p class="lang">.NET — <code>Program.cs</code></p>
+<pre><code>using Shape;
+
+await ShapeApp.Run("config/shape.json", args);
+// Reads the same JSON config (masks, access, DSN, OIDC),
+// overlays DB_DSN / JWT_SECRET / CLOUD_SQL_INSTANCE env vars,
+// dispatches to MapShape on a Kestrel host.</code></pre>
+                </article>
+            </div>
+
+            <p class="sub">Both runtimes read the same <code>config/shape.json</code> shape. Masks support two authoring styles in the same block — an external <code>sqlFile</code> reference for queries you want under version control as standalone <code>.sql</code> assets, and inline <code>sql</code> with typed <code>params</code> for short queries you want to read alongside the config:</p>
+<pre class="mig-config-block"><code>{
+    "db":     { "dsn": "sqlsrv:Server=...;Database=...", "user": "...", "pass": "..." },
+    "access": { "admin": ["customers", "invoices", "products"] },
+    "auth": {
+        "driver": "jwt",
+        "oidc": {
+            "preset":       "entra",
+            "tenant_id":    "...",
+            "audience":     "api://my-app",
+            "role_mapping": { "Backend.Admin": "admin" }
+        }
+    },
+    "masks": {
+        "reports.topCustomers": {
+            "sqlFile":     "queries/top-customers.sql",
+            "roles":       ["admin"],
+            "description": "Top 20 customers by revenue."
+        },
+
+        "orders.recentByRegion": {
+            "sql": "SELECT id, customer_id, total, created_at FROM orders WHERE region = :region AND created_at >= :since ORDER BY created_at DESC",
+            "params": {
+                "region": { "type": "string", "required": true },
+                "since":  { "type": "string", "required": true }
+            },
+            "roles":       ["admin", "manager"],
+            "description": "Recent orders for a region since a given date."
+        }
+    }
+}</code></pre>
+            <p class="sub" style="margin-top: 0.9rem; font-size: 0.88rem;">Both styles share the same <code>:param</code> placeholder syntax, the same role-gating, the same description-into-manifest passthrough, and the same OData query options at call time (<code>?$top</code>, <code>?$skip</code>, <code>?$orderby</code>). Pick whichever style fits the SQL — short hand-written queries inline, long reporting queries in their own file under <code>queries/*.sql</code>. The runtime handles paging per driver, including <code>sqlsrv:</code>.</p>
+        </div>
+    </section>
+
+    <section class="mig-section">
+        <div class="container">
+            <h2>FAQ</h2>
+            <div class="mig-faq">
+                <div class="mig-faq-item">
+                    <h3>What about hooks and commands written in PHP / C#?</h3>
+                    <p>Hooks and custom commands are language-specific. They're the small fraction of code that's actually <em>your</em> business logic — and they need to be ported. The framework primitives around them (mask config, audit log, validators, FK navigation) don't change. In practice this is &lt;10% of a typical app's code, and it's the part you'd want to revisit anyway when changing language.</p>
+                </div>
+                <div class="mig-faq-item">
+                    <h3>Are the manifests really byte-identical?</h3>
+                    <p>For the schema-derived portion, yes. Tags, entity definitions, mask params, audit columns, soft-delete flags, default limits, file uploads — all produced by the same conventions reading the same schema, so the JSON output is identical modulo whitespace. Free-text fields (e.g. server identity) differ. Tested by diffing the manifest output of the same database via PHP and .NET runtimes.</p>
+                </div>
+                <div class="mig-faq-item">
+                    <h3>Do JWT tokens really work across the switch?</h3>
+                    <p>Yes for HS256 (shared-secret) tokens — both runtimes use the same algorithm and the same secret. For OIDC tokens (RS256), the runtime never issues them; it validates them against the IdP's JWKS endpoint, so the issuer (Entra ID / Auth0 / Okta / Google / Cognito) is the source regardless of which runtime is verifying.</p>
+                </div>
+                <div class="mig-faq-item">
+                    <h3>What about database performance characteristics?</h3>
+                    <p>Both runtimes use prepared statements; both push <code>?$top</code> / <code>?$skip</code> into SQL; both cache schema introspection. .NET's connection pool is built into the BCL and doesn't need <code>db.persistent</code> opt-in (which PHP needs for PHP-FPM). Net effect: the two runtimes have similar per-request profiles on the same hardware, whether the backend is MySQL, PostgreSQL, SQLite, or SQL Server.</p>
+                </div>
+                <div class="mig-faq-item">
+                    <h3>Can the two runtimes run side-by-side in production?</h3>
+                    <p>Yes — that's the recommended migration path. Behind a load balancer with a weighted split, you can route 5% of traffic to the new runtime, watch metrics, ramp up gradually, and roll back instantly if needed. Both runtimes share the database (no replication), share the auth (same tokens), and share the config (same JSON file).</p>
+                </div>
+                <div class="mig-faq-item">
+                    <h3>What's NOT compatible across runtimes?</h3>
+                    <p>Three things: (1) hooks and commands written in language-specific code; (2) the <code>FromAssembly</code> entity-first mode in .NET versus the entity-class form in PHP — the attribute / annotation surfaces differ at authoring time; (3) language-specific extension hooks (e.g. PHP autoload tricks, .NET DI registrations). The framework-shaped surface — masks, access, manifest, OpenAPI, MCP — is identical.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mig-foot">
+        <div class="container">
+            <p>Browse the <a href="index.html">full architecture page</a> · See the <a href="start.html">90-second pitch</a></p>
+            <p class="host-ip-line">
+                Hosted on <code id="host-ip">resolving&hellip;</code>
+            </p>
+        </div>
+    </section>
+
+    </main>
+
+    <script>
+    (function () {
+        var el = document.getElementById('host-ip');
+        if (!el) return;
+        fetch('ip.php', { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.text() : 'unresolved'; })
+            .then(function (txt) { el.textContent = (txt || 'unknown').trim(); })
+            .catch(function () { el.textContent = 'unresolved'; });
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+# Dependencies
+vendor/
+composer.lock
+.deploy/
+.ftp-deploy-sync-state.json
+
+# Scripts and deploy tooling (local only)
+php/scripts/*
+
+# Local files and secrets — commit only *.example.* templates
+.env
+.env.*
+*.local
+*.local.*
+env.php
+env.*.php
+appsettings.*.json
+.shape/
+*.pem
+*.key
+!*.example
+!*.example.*
+!php/scripts/*.example.*
+
+# SQLite databases (generated, contain user data)
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Claude Code local settings
+.claude/
+
+# Test run artifacts
+php/tests/output/

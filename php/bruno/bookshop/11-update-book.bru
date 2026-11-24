@@ -1,0 +1,43 @@
+meta {
+  name: Update Book Stock
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/api.php
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "op": "mutation",
+    "payload": {
+      "mutations": [
+        {
+          "table": "books",
+          "action": "update",
+          "ref": "restock",
+          "filter": { "id": 5 },
+          "data": { "stock": 20 }
+        }
+      ]
+    }
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("1 row updated", function() {
+    expect(res.body.results[0].affected).to.equal(1);
+  });
+}

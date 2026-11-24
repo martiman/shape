@@ -1,0 +1,41 @@
+meta {
+  name: Reviews by Book (FK auto-mask)
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/api.php
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "op": "query",
+    "payload": {
+      "queries": [
+        {
+          "ref": "dune_reviews",
+          "sql": "reviews.byBookId",
+          "params": { "book_id": 1 }
+        }
+      ]
+    }
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("returns 2 Dune reviews", function() {
+    expect(res.body.results[0].count).to.equal(2);
+  });
+}

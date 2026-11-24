@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShapeRuntime + Shape | Manual Runtime and Full API Framework with SQL Server support</title>
+    <meta name="description" content="ShapeRuntime is the manual runtime for masked queries, mutations, auth, and commands. Shape is the full framework on top with two authoring modes and support for MySQL, PostgreSQL, SQLite, and SQL Server.">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="bg-noise" aria-hidden="true"></div>
+    <div class="glow glow-a" aria-hidden="true"></div>
+    <div class="glow glow-b" aria-hidden="true"></div>
+
+    <aside class="top-banner" role="region" aria-label="AI agent quick start">
+        <div class="container">
+            <p>
+                <strong>New here?</strong>
+                Read the <a href="start.html">90-second pitch</a>, or drop <a href="https://github.com/martiman/shape/blob/main/AGENTS.md" target="_blank" rel="noopener"><code>AGENTS.md</code></a> into Claude / ChatGPT / Cursor / Codex — Shape's conventions become your AI's default in one paste.
+            </p>
+            <a class="top-banner-cta" href="start.html">
+                90-second pitch
+                <span aria-hidden="true">→</span>
+            </a>
+        </div>
+    </aside>
+
+    <header class="topbar">
+        <div class="container">
+            <a class="brand" href="#top">ShapeRuntime</a>
+            <nav aria-label="Main navigation">
+                <ul class="nav-menu">
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#polyglot">Polyglot</a></li>
+                    <li><a href="#shape">Shape</a></li>
+                    <li><a href="#ai">For AI</a></li>
+                    <li><a href="#start">Start</a></li>
+                    <li><a href="#mcp">MCP</a></li>
+                    <li><a href="#flow">Flow</a></li>
+                    <li><a href="#examples">Examples</a></li>
+                    <li><a href="#endpoints">Endpoints</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main id="top">
+    <section class="hero">
+        <div class="container">
+            <p class="kicker">Freestyle Developer Stack</p>
+            <h1>One endpoint. Typed ops. Real business control.</h1>
+            <p class="subtitle">ShapeRuntime gives teams a single API entrypoint with role-aware auth, advanced query options, transactional mutations, and command-based business workflows. Shape sits on top when you want generated API surface from either entity classes or an existing database schema.</p>
+            <div class="cta-row">
+                <a href="https://github.com/martiman/shape/blob/main/AGENTS.md" target="_blank" rel="noopener" class="btn btn-ai">Get <code>AGENTS.md</code> for your AI →</a>
+                <a href="#start" class="btn btn-solid">Onboard your AI</a>
+                <a href="#shape" class="btn btn-shape">See how Shape fits</a>
+            </div>
+            <ul class="hero-metrics">
+                <li><span>For AI tools</span><strong><code>AGENTS.md</code> + <code>llms.txt</code></strong></li>
+                <li><span>Authorization</span><strong>Mask + Role checks</strong></li>
+                <li><span>Endpoints</span><strong>REST · OData · MCP · OpenAPI</strong></li>
+            </ul>
+        </div>
+    </section>
+
+    <section id="about" class="panel">
+        <div class="container">
+            <div class="section-head">
+                <p class="kicker">Why ShapeRuntime</p>
+                <h2>A compact API layer for fast product intelligence.</h2>
+            </div>
+            <div class="feature-grid">
+                <div class="card">
+                    <h3>Single endpoint contract</h3>
+                    <p>All operations run through <code>/index.php</code> with a simple <code>op + payload</code> body.</p>
+                </div>
+                <div class="card">
+                    <h3>Role-aware masks</h3>
+                    <p>Named query masks can require roles so sensitive datasets stay fenced.</p>
+                </div>
+                <div class="card">
+                    <h3>Refresh token rotation</h3>
+                    <p>Refresh tokens rotate safely, making replay attacks much harder.</p>
+                </div>
+                <div class="card">
+                    <h3>Admin control ops</h3>
+                    <p>Create users and reset passwords through explicit admin operations.</p>
+                </div>
+                <div class="card">
+                    <h3>OData-inspired options</h3>
+                    <p>Use per-query <code>orderby</code>, <code>skip</code>, <code>top</code>, <code>count</code>, <code>groupby</code>, and <code>aggregate</code>.</p>
+                </div>
+                <div class="card">
+                    <h3>Safe mutations</h3>
+                    <p>Insert, update, and delete data using role-based validation and prepared statements.</p>
+                </div>
+                <div class="card">
+                    <h3>Business commands</h3>
+                    <p>Run domain workflows with <code>op=command</code>, powered by reusable handlers and transactional orchestration.</p>
+                </div>
+                <div class="card">
+                    <h3>Validators and hooks</h3>
+                    <p>Attach field validators plus before/after hooks to enforce business rules and side effects safely.</p>
+                </div>
+                <div class="card">
+                    <h3>Production-proven flow</h3>
+                    <p>The stack is already tested end-to-end with a complete Bruno collection.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="polyglot" class="panel polyglot-panel">
+        <div class="container">
+            <div class="section-head">
+                <p class="kicker">Polyglot — PHP & .NET</p>
+                <h2>Switch your stack without rewriting your app.</h2>
+                <p class="subtitle">PHP and .NET share the substrate, not just the brand. The same <code>config/shape.json</code> runs on either runtime. The same database schema, manifest, OpenAPI, MCP tools, and JWT tokens come out the other end. Switching is a deployment change, not a rewrite.</p>
+            </div>
+
+            <div class="polyglot-grid">
+                <div class="polyglot-shared">
+                    <h3>What stays the same when you switch</h3>
+                    <dl class="polyglot-list">
+                        <dt>Database schema + auto-detect conventions</dt>
+                        <dd>Both runtimes read <code>deleted_at</code>, <code>audit_log</code>, <code>users_lookup_column</code> the same way.</dd>
+
+                        <dt><code>config/shape.json</code></dt>
+                        <dd>Masks, access map, DSN, OIDC presets — verbatim. No translation step.</dd>
+
+                        <dt><code>?manifest</code> and <code>?openapi</code></dt>
+                        <dd>Byte-compatible JSON. AI agents and SDK generators don't notice the language change.</dd>
+
+                        <dt><code>?mcp</code> server + tool definitions</dt>
+                        <dd>Same JSON-RPC protocol; Claude Desktop config unchanged.</dd>
+
+                        <dt>JWT tokens</dt>
+                        <dd>Same signing; sessions survive the switch.</dd>
+
+                        <dt>REST / OData / generic-mask URLs</dt>
+                        <dd>Same paths; frontend code unchanged.</dd>
+                    </dl>
+                </div>
+
+                <div class="polyglot-steps">
+                    <h3>Migration in four steps</h3>
+                    <ol class="polyglot-step-list">
+                        <li><strong>Install</strong> the new runtime alongside the old (same machine or different — doesn't matter).</li>
+                        <li><strong>Point</strong> it at the same <code>config/shape.json</code> and the same database. No file changes.</li>
+                        <li><strong>Verify</strong> by diffing <code>?manifest</code>, <code>?openapi</code>, and a sample query — should be byte-equivalent.</li>
+                        <li><strong>Switch</strong> traffic at DNS or load balancer. Reverse to roll back.</li>
+                    </ol>
+                    <p class="polyglot-cta">No data migration. No API contract change. No client SDK regen. No frontend rewrite. <a href="migration.html">Full migration guide →</a></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel stack-panel">
+        <div class="container">
+            <div class="section-head stack-head">
+                <p class="kicker">Choose Your Way</p>
+                <h2>Start with the build mode that matches your app, not the package diagram.</h2>
+                <p class="subtitle">Most teams choose by starting point. Manual masks is for exact SQL control. Entity-first is for code as source of truth. Database-first is for existing schemas you want to expose quickly.</p>
+            </div>
+            <div class="mode-grid">
+                <article class="mode-card mode-card-manual">
+                    <span class="mode-badge">Mode 1</span>
+                    <h3>Manual Masks</h3>
+                    <p class="mode-summary">Design every mask, validator, hook, and command by hand. That means your <code>app.php</code> file is the contract and the runtime executes it directly with no entity generation step.</p>
+                    <ul class="mode-list">
+                        <li>Exact SQL shape and naming</li>
+                        <li>Best for complex joins and tuned analytics</li>
+                        <li><code>AppRouter::run($configPath, 'myapp')</code></li>
+                    </ul>
+                </article>
+                <article class="mode-card mode-card-entity">
+                    <span class="mode-badge">Mode 2</span>
+                    <h3>Entity-First</h3>
+                    <p class="mode-summary">Write entity classes and attributes in PHP, then let Shape generate the repetitive read surface, validators, and metadata.</p>
+                    <ul class="mode-list">
+                        <li><code>ShapeApp::fromEntities()</code></li>
+                        <li>Best for greenfield apps and stable domain models</li>
+                        <li>Runs through Shape on top of ShapeRuntime</li>
+                    </ul>
+                </article>
+                <article class="mode-card mode-card-db">
+                    <span class="mode-badge">Mode 3</span>
+                    <h3>Database-First</h3>
+                    <p class="mode-summary">Point Shape at an existing schema and let it derive the API contract. Best when the database already exists and you need a fast first version.</p>
+                    <ul class="mode-list">
+                        <li><code>ShapeApp::fromDatabase()</code></li>
+                        <li>Best for legacy or shared schemas</li>
+                        <li>Also runs through Shape on top of ShapeRuntime</li>
+                    </ul>
+                </article>
+            </div>
+            <div class="mode-examples">
+                <article class="mode-example">
+                    <h3>Manual masks init</h3>
+                    <pre><code>$configPath = __DIR__ . '/../config/app.php';
+AppRouter::run($configPath, 'myapp');</code></pre>
+                    <p>Your masks, validators, and commands live directly in <code>app.php</code>. You choose every SQL name and every writable surface yourself.</p>
+                </article>
+                <article class="mode-example">
+                    <h3>Entity-first init</h3>
+                    <pre><code>$config = ShapeApp::fromEntities(
+    __DIR__ . '/../entities',
+    __DIR__ . '/../config/app.php'
+);
+ShapeRouter::run($config, 'myapp');</code></pre>
+                    <p>Entity classes become the source of truth, then Shape generates masks, validators, manifest metadata, and OData-style GET reads.</p>
+                </article>
+                <article class="mode-example">
+                    <h3>Database-first init</h3>
+                    <pre><code>$config = ShapeApp::fromDatabase(
+    __DIR__ . '/../config/app.php'
+);
+ShapeRouter::run($config, 'myapp');</code></pre>
+                    <p>The live schema becomes the input. Shape introspects only tables listed in <code>access</code> — plus keys and FK relationships — so pointing it at a 2000-table legacy DB stays cheap.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section id="shape" class="panel shape-panel">
+        <div class="container">
+            <div class="shape-hero">
+                <div class="shape-copy">
+                    <p class="kicker">Full Shape Library</p>
+                    <h2>A full framework with two entry paths: code-first and DB-first.</h2>
+                    <p class="subtitle">Shape is the higher-level framework. Instead of hand-writing every mask and validator, you either declare entities and relationships in code or introspect an existing database schema. The framework generates the repetitive read/write contract and still lets you drop into raw SQL for the hard parts.</p>
+                    <div class="shape-note">
+                        <strong>Architecture underneath</strong>
+                        <p>Manual masks map directly to ShapeRuntime. Entity-first and database-first are two ways of using Shape, which sits on top of ShapeRuntime and adds generation, manifest output, OpenAPI, and OData-style GET routes.</p>
+                    </div>
+                </div>
+                <div class="shape-artboard" aria-hidden="true">
+                    <div class="shape-node">
+                        <span>Manual masks</span>
+                        <strong>direct runtime control</strong>
+                    </div>
+                    <div class="shape-arrow">→</div>
+                    <div class="shape-node">
+                        <span>Entity-first / DB-first</span>
+                        <strong>Shape generation layer</strong>
+                    </div>
+                    <div class="shape-arrow">→</div>
+                    <div class="shape-node">
+                        <span>Runtime</span>
+                        <strong>ShapeRuntime execution engine</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="shape-drivers">
+                <div class="shape-drivers-head">
+                    <p class="kicker">Driver support</p>
+                    <h3>One config, four databases.</h3>
+                    <p>Drop a DSN in <code>env.php</code> — Shape auto-detects MySQL, PostgreSQL, SQLite, or SQL Server and picks the right schema introspection path, identifier quoting, and insert-id strategy. No dialect switches in your application code.</p>
+                </div>
+                <div class="shape-drivers-grid">
+                    <article class="shape-driver">
+                        <h4>MySQL <span>/ MariaDB</span></h4>
+                        <p>Reads <code>INFORMATION_SCHEMA</code> for tables, columns, FKs, and primary keys. Backtick quoting, <code>lastInsertId()</code> on auto-increment columns.</p>
+                    </article>
+                    <article class="shape-driver">
+                        <h4>PostgreSQL</h4>
+                        <p>Reads <code>information_schema</code> + <code>pg_index</code> for keys, normalizes types (<code>integer</code>→<code>int</code>, <code>numeric</code>→<code>decimal</code>). Double-quote quoting, <code>INSERT … RETURNING id</code> for serial/identity columns.</p>
+                    </article>
+                    <article class="shape-driver">
+                        <h4>SQLite</h4>
+                        <p>Reads <code>PRAGMA table_info</code>, <code>PRAGMA foreign_key_list</code>, and <code>sqlite_master</code>. Backtick quoting, native rowid for inserts. Convenient for tests and local dev.</p>
+                    </article>
+                    <article class="shape-driver">
+                        <h4>SQL Server <span>/ MSSQL</span></h4>
+                        <p>Reads <code>INFORMATION_SCHEMA</code> plus <code>sys.extended_properties</code> and identity metadata. Bracket quoting, <code>OUTPUT INSERTED</code> / <code>SCOPE_IDENTITY()</code> for inserts.</p>
+                    </article>
+                </div>
+            </div>
+
+            <div class="shape-pillar-grid">
+                <article class="shape-pillar">
+                    <h3>Single generator pipeline</h3>
+                    <p>Both modes end in the same generated surface: masks, validators, manifest metadata, and OData-style reads built on top of ShapeRuntime.</p>
+                </article>
+                <article class="shape-pillar">
+                    <h3>Generated CRUD surface</h3>
+                    <p>Get <code>table.list</code>, <code>table.get</code>, <code>table.getMany</code>, FK filters, writable masks, and validators without repeating the same config file patterns.</p>
+                </article>
+                <article class="shape-pillar">
+                    <h3>Discoverable API</h3>
+                    <p>Expose machine-readable manifest output and OData-style GET routes for teams building admin tools, AI agents, or low-friction internal clients.</p>
+                </article>
+            </div>
+
+            <div class="shape-showcase">
+                <article class="shape-code">
+                    <h3>Code-first declaration</h3>
+                    <pre><code>#[Entity('products')]
+#[Access(roles: ['admin', 'user'])]
+class Product
+{
+    #[Id, AutoIncrement]
+    public int $id;
+
+    #[Column(type: 'varchar', length: 255)]
+    #[Validate('notEmpty')]
+    public string $name;
+
+    #[Column(type: 'decimal', precision: 10, scale: 2)]
+    #[Validate('positive')]
+    public float $price;
+}</code></pre>
+                    <p>One entity file becomes the source of truth for read surface, write validation, and metadata.</p>
+                </article>
+                <article class="shape-code">
+                    <h3>DB-first or code-first output</h3>
+                    <pre><code>products.list
+products.get
+products.getMany
+products
+products.insert validator
+products.update validator
+manifest entity metadata
+GET /api.php/products
+GET /api.php/products(42)</code></pre>
+                    <p>The framework removes repetitive config in both modes, but you can still add manual masks for joins, aggregates, and unusual workflows.</p>
+                </article>
+            </div>
+
+            <div class="shape-combine">
+                <div class="shape-combine-head">
+                    <p class="kicker">Combined use</p>
+                    <h3>DB-first auto-CRUD plus hand-written masks.</h3>
+                    <p>Shape generates the standard surface for tables you list in <code>access</code>. Custom <code>masks</code> live alongside for joins, aggregates, or queries against tables you do not want to expose as full CRUD. Tables that appear in neither are not introspected at all.</p>
+                </div>
+                <div class="shape-showcase">
+                    <article class="shape-code">
+                        <h3>config/app.php</h3>
+                        <pre><code>return [
+    // Auto-CRUD only for these tables
+    'access' => [
+        'books'   => ['admin', 'user'],
+        'authors' => ['admin'],
+    ],
+
+    // Custom masks for everything else
+    'masks' => [
+        'reports.topAuthors' => [
+            'sql' => 'SELECT a.name,
+                             COUNT(b.id) AS book_count
+                      FROM authors a
+                      JOIN books b ON b.author_id = a.id
+                      GROUP BY a.id
+                      ORDER BY book_count DESC
+                      LIMIT 10',
+            'params' => [],
+            'roles'  => ['admin'],
+        ],
+        'orders.monthly' => [
+            'sql' => 'SELECT DATE_FORMAT(created_at, "%Y-%m") AS month,
+                             SUM(total) AS revenue
+                      FROM orders
+                      WHERE created_at >= :since
+                      GROUP BY month',
+            'params' => ['since' => ['type' => 'string', 'required' => true]],
+            'roles'  => ['admin'],
+        ],
+    ],
+];</code></pre>
+                    </article>
+                    <article class="shape-code">
+                        <h3>Resulting API surface</h3>
+                        <pre><code># Auto-generated from access
+books.list
+books.get
+books.getMany
+books.byAuthorId
+books              ← writable
+authors.list
+authors.get
+authors.getMany
+authors            ← writable
+
+# Hand-written masks
+reports.topAuthors
+orders.monthly
+
+# orders, reports, and any other tables
+# in the database are NOT introspected.</code></pre>
+                    </article>
+                </div>
+            </div>
+
+            <div class="shape-combine shape-combine-alt">
+                <div class="shape-combine-head">
+                    <p class="kicker">Wildcard + admin masks</p>
+                    <h3>Open the whole schema, then carve out what stays private.</h3>
+                    <p>Use <code>access['*']</code> to introspect every table in one line, list the few you want excluded, and let the framework keep secret tables (<code>users</code>, <code>refresh_tokens</code>, …) off the auto-CRUD surface entirely. Opt into <code>admin_masks</code> to get safe-column read masks for the secret tables, gated to <code>admin</code>.</p>
+                </div>
+                <div class="shape-showcase">
+                    <article class="shape-code">
+                        <h3>config/app.php</h3>
+                        <pre><code>return [
+    // Every table gets these roles by default
+    'access' => [
+        '*'      => ['admin', 'user'],
+        'orders' => ['admin'],          // per-table override
+    ],
+
+    // Extra dev-defined exclusions (on top of secrets)
+    'exclude_tables' => ['legacy_audit', 'tmp_import'],
+
+    // Extend the secret-table baseline
+    // (users + refresh_tokens are always secret)
+    'secret_tables' => ['api_keys'],
+
+    // Opt-in built-in admin masks for secret tables.
+    // Sensitive columns (password*, *_hash, *_secret, ...)
+    // are stripped automatically.
+    'admin_masks' => true,
+];</code></pre>
+                    </article>
+                    <article class="shape-code">
+                        <h3>Resulting API surface</h3>
+                        <pre><code># Auto-CRUD for every table except
+# excluded + secret
+books.list / .get / .getMany / .byAuthorId / books
+authors.list / .get / .getMany / authors
+reviews.list / .get / .getMany / reviews
+orders.list / .get / .getMany / orders   ← admin only
+... (every other non-secret table)
+
+# Safe admin reads for secret tables
+users.adminList            ← admin role
+users.adminGet
+refresh_tokens.adminList
+refresh_tokens.adminGet
+api_keys.adminList
+api_keys.adminGet
+
+# Off the API entirely
+legacy_audit, tmp_import   ← excluded
+users.password_hash, *_secret, *_token
+                           ← stripped from admin masks</code></pre>
+                    </article>
+                </div>
+            </div>
+
+            <div class="shape-steps">
+                <article class="shape-step">
+                    <span>1</span>
+                    <h3>Pick your input</h3>
+                    <p>Choose entity classes when code should own the contract, or choose live database introspection when the schema already exists.</p>
+                </article>
+                <article class="shape-step">
+                    <span>2</span>
+                    <h3>Choose entry mode</h3>
+                    <p>Use <code>ShapeApp::fromEntities()</code> for code-first work or <code>ShapeApp::fromDatabase()</code> for schema-first onboarding. Both feed the same generator pipeline.</p>
+                </article>
+                <article class="shape-step">
+                    <span>3</span>
+                    <h3>Serve runtime + docs</h3>
+                    <p><code>ShapeRouter::run()</code> uses the ShapeRuntime engine underneath and adds manifest, OpenAPI, and OData-style GET endpoints on top.</p>
+                </article>
+            </div>
+
+            <div class="shape-compare">
+                <div>
+                    <p class="kicker">When to stay low-level</p>
+                    <h3>Keep ShapeRuntime when you need exact SQL control.</h3>
+                    <p>Use the runtime directly for special joins, irregular mask naming, nonstandard read/write contracts, or highly tuned analytics queries that should remain manually curated.</p>
+                </div>
+                <div>
+                    <p class="kicker">When to move up</p>
+                    <h3>Use Shape when the app is metadata-driven.</h3>
+                    <p>Choose the full library when CRUD, validation, relationship reads, manifest discovery, and agent-facing metadata should come from either entity metadata or the existing database schema instead of duplicated config.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="ai" class="panel ai-panel">
+        <div class="container">
+            <div class="section-head">
+                <p class="kicker">Built for AI agents</p>
+                <h2>The smallest path to a working backend.</h2>
+                <p class="subtitle">Shape is engineered around one user — an AI agent producing a backend with the fewest possible tokens, retries, and structural mistakes. Every design choice favors clarity over flexibility, convention over configuration, and structure over vigilance.</p>
+            </div>
+
+            <div class="ai-pillars">
+                <article class="ai-pillar">
+                    <h3>SQL is the contract</h3>
+                    <p>Every readable and writable surface is a named, vetted SQL mask with explicit roles. The runtime accepts no arbitrary SQL — authorization is structural, not middleware.</p>
+                </article>
+                <article class="ai-pillar">
+                    <h3>Database-first by default</h3>
+                    <p>Shape introspects the live schema and generates the entire CRUD surface. No entity classes, no migrations, no two-source-of-truth maintenance.</p>
+                </article>
+                <article class="ai-pillar">
+                    <h3>Convention over configuration</h3>
+                    <p><code>users</code> is secret, <code>deleted_at</code> means soft-delete, <code>NOT NULL</code> implies <code>notEmpty</code>, FK columns auto-generate filter masks. The agent overrides only when its app deliberately diverges.</p>
+                </article>
+                <article class="ai-pillar">
+                    <h3>Self-describing at every layer</h3>
+                    <p>Manifest, OpenAPI, and ready-to-paste Anthropic/OpenAI tool definitions all derive from the same metadata. Errors carry <code>expected</code>, <code>example</code>, <code>hint</code> — agents recover without re-fetching anything.</p>
+                </article>
+                <article class="ai-pillar">
+                    <h3>Driver-portable</h3>
+                    <p>MySQL, PostgreSQL, SQLite, and SQL Server share one code path. Identifier quoting, insert-id strategy, schema introspection, and boolean coercion are absorbed by the runtime.</p>
+                </article>
+                <article class="ai-pillar">
+                    <h3>Token-frugal by design</h3>
+                    <p>Every roadmap item is judged against one question: does it remove tokens an AI agent would otherwise spend? Quick-start one-liners, auto-access conventions, and DDL-from-manifest are next.</p>
+                </article>
+            </div>
+
+            <div class="ai-economics">
+                <h3>Lines of code saved, line by line</h3>
+                <p class="ai-economics-caption">Estimates assume an AI agent producing the entire backend end-to-end — initial scaffold plus three iterations on the average endpoint, including the rewrites every retry loop drags along. Lines are PHP source the agent would otherwise have to write, review, and re-read; the same code that drives context-window pressure and breaks on every schema change. Conservative figures.</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Concern</th>
+                            <th>Without Shape</th>
+                            <th>With Shape</th>
+                            <th>Lines saved</th>
+                            <th>Invoicing<br><small>(Fakturoid-like, 30 entities)</small></th>
+                            <th>E-shop<br><small>(traditional, 50 entities)</small></th>
+                            <th>CRM<br><small>(typical, 100 tables)</small></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Define a table's API</td>
+                            <td>Entity class + repo + controller + validation</td>
+                            <td>Add table to <code>access</code></td>
+                            <td>~280 / entity</td>
+                            <td>~8.4k lines</td>
+                            <td>~14k lines</td>
+                            <td>~28k lines</td>
+                        </tr>
+                        <tr>
+                            <td>Soft-delete an entity</td>
+                            <td>Hand-roll WHERE, DELETE-as-UPDATE, restore endpoint</td>
+                            <td>Add <code>deleted_at TIMESTAMP NULL</code></td>
+                            <td>~50 / table</td>
+                            <td>~300 lines</td>
+                            <td>~500 lines</td>
+                            <td>~1.25k lines</td>
+                        </tr>
+                        <tr>
+                            <td>Validate inputs</td>
+                            <td>Per-column rules in code</td>
+                            <td>Inferred from <code>NOT NULL</code> / <code>VARCHAR(N)</code></td>
+                            <td>~24 / entity</td>
+                            <td>~720 lines</td>
+                            <td>~1.2k lines</td>
+                            <td>~2.4k lines</td>
+                        </tr>
+                        <tr>
+                            <td>Document for an LLM consumer</td>
+                            <td>Hand-write tool schemas</td>
+                            <td><code>?manifest&amp;format=anthropic-tools</code></td>
+                            <td>~100 / entity</td>
+                            <td>~3k lines</td>
+                            <td>~5k lines</td>
+                            <td>~10k lines</td>
+                        </tr>
+                        <tr>
+                            <td>Recover from a wrong call</td>
+                            <td>Read docs, retry, rewrite (full context re-load each loop)</td>
+                            <td><code>expected</code> + <code>example</code> in the error</td>
+                            <td>~50 / rewrite</td>
+                            <td>~1.5k lines</td>
+                            <td>~3k lines</td>
+                            <td>~6k lines</td>
+                        </tr>
+                        <tr>
+                            <td>Switch MySQL → SQL Server</td>
+                            <td>Rewrite dialect-specific SQL</td>
+                            <td>Change DSN</td>
+                            <td>~50 (one-time)</td>
+                            <td>~50 lines</td>
+                            <td>~50 lines</td>
+                            <td>~80 lines</td>
+                        </tr>
+                        <tr>
+                            <td>Hide sensitive columns from admins</td>
+                            <td>Custom view + endpoint + role check</td>
+                            <td><code>'admin_masks' =&gt; true</code></td>
+                            <td>~80 / secret table</td>
+                            <td>~320 lines</td>
+                            <td>~400 lines</td>
+                            <td>~640 lines</td>
+                        </tr>
+                        <tr>
+                            <td>Open everything for prototyping</td>
+                            <td>Generate boilerplate per table</td>
+                            <td><code>'access' =&gt; ['*' =&gt; ['admin','user']]</code></td>
+                            <td>(see row 1)</td>
+                            <td>(counted above)</td>
+                            <td>(counted above)</td>
+                            <td>(counted above)</td>
+                        </tr>
+                        <tr class="total-row">
+                            <th colspan="4">Total lines saved per project</th>
+                            <th>~14k lines</th>
+                            <th>~24k lines</th>
+                            <th>~48k lines</th>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <aside class="ai-economics-insight">
+                <p class="kicker">Why the cost compounds</p>
+                <h3>A 100-table CRM is not 8× harder than the 30-entity invoicing app — it's closer to 20×.</h3>
+                <p>48,000 lines is roughly half the size of a small PHP framework. These aren't dead boilerplate — every line is code the agent has to write <em>and</em> re-read on each iteration. Over a six-month build, the retry-loop and review surface scales super-linearly with table count: each schema change touches more files, each wrong assumption forces more rewrites, each new endpoint demands more context that has to be reloaded into the LLM. Shape collapses the multiplier by making the schema the spec — once.</p>
+            </aside>
+
+            <div class="ai-bottomline">
+                <p class="kicker">The bottom line</p>
+                <h3>Shape is the library an AI picks because it succeeds on the first try.</h3>
+                <p>Read the full case in <a href="https://github.com/martiman/shape/blob/main/docs/shape/WHY-SHAPE.md"><code>docs/shape/WHY-SHAPE.md</code></a>, browse the <a href="#shape">framework architecture</a>, or see what's <a href="https://github.com/martiman/shape/blob/main/STATUS.md">next on the roadmap</a>.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="start" class="panel start-panel">
+        <div class="container">
+            <div class="section-head">
+                <p class="kicker">Step zero — Tell your AI about Shape</p>
+                <h2>One file, given to your AI tool, and Shape becomes part of its toolkit.</h2>
+                <p class="subtitle">The first move with Shape isn't writing code — it's handing <a href="https://github.com/martiman/shape/blob/main/AGENTS.md"><code>AGENTS.md</code></a> to your AI. ~5,000 tokens of curated context: every convention, every error envelope, every common mistake, written specifically for agents. After this single onboarding step, your AI writes correct Shape code on the first try — no Laravel-isms, no scaffolding loops, no re-fetching the manifest after every error.</p>
+            </div>
+
+            <div class="start-tools">
+                <article class="start-tool">
+                    <span class="start-badge">Claude Code · Claude Desktop</span>
+                    <h3>Reference the file directly</h3>
+                    <p>Paste in the URL or attach the file to your project:</p>
+                    <pre><code>Read https://github.com/martiman/shape/blob/main/AGENTS.md
+and then build me a backend for &lt;your domain&gt;.</code></pre>
+                    <p class="start-note">Claude reads the file once and applies every Shape convention from that point in the conversation. For deeper integration, mount the Shape MCP server — Claude Desktop then sees every endpoint as a live tool.</p>
+                </article>
+
+                <article class="start-tool">
+                    <span class="start-badge">ChatGPT · OpenAI · Codex</span>
+                    <h3>Paste the contents into the system prompt</h3>
+                    <p>Fetch and attach as project context:</p>
+                    <pre><code>curl https://raw.githubusercontent.com/martiman/shape/main/AGENTS.md
+# → paste output as a system message or upload as a project file</code></pre>
+                    <p class="start-note">Once the file is in the context window, Shape's conventions are part of the model's working memory for the session. The file fits comfortably alongside any project of normal size.</p>
+                </article>
+
+                <article class="start-tool">
+                    <span class="start-badge">Cursor · Cline · Continue</span>
+                    <h3>Drop it into the agent rules folder</h3>
+                    <p>Place <code>AGENTS.md</code> in your IDE's agent-rules directory (or paste into Cursor's <code>.cursorrules</code>):</p>
+                    <pre><code>cp AGENTS.md .cursorrules
+# Cursor / Cline / Continue all auto-load this on session start</code></pre>
+                    <p class="start-note">Or use <a href="https://llmstxt.org/" target="_blank" rel="noopener"><code>llms.txt</code></a> — Shape ships one at the repo root. Tools that follow that convention discover the framework automatically.</p>
+                </article>
+            </div>
+
+            <aside class="start-after">
+                <p class="kicker">What changes after the file is loaded</p>
+                <h3>The AI plans its work around Shape's grain instead of fighting it.</h3>
+                <ul>
+                    <li><strong>It writes a schema first</strong>, not a controller class — because the schema <em>is</em> the spec.</li>
+                    <li><strong>It uses <code>access['*']</code> for prototyping</strong>, not 30 lines of per-table boilerplate.</li>
+                    <li><strong>It names a column <code>deleted_at</code></strong> when the table needs soft-delete, instead of writing custom WHERE-IS-NULL plumbing.</li>
+                    <li><strong>It reads the <code>expected</code> + <code>example</code> in error responses</strong> and corrects on the first retry, instead of re-fetching the manifest.</li>
+                    <li><strong>It mounts the MCP server</strong> when the user says "let me ask Claude to query this" — because it knows that path exists.</li>
+                </ul>
+                <p>The AI stops being a generic backend assistant and starts being a Shape developer. That's the entire onboarding ceremony.</p>
+            </aside>
+        </div>
+    </section>
+
+    <section id="mcp" class="panel mcp-panel">
+        <div class="container">
+            <div class="section-head">
+                <p class="kicker">Plug into Claude Desktop</p>
+                <h2>Mount Shape as a tool, in 60 seconds.</h2>
+                <p class="subtitle">Shape ships a built-in <a href="https://modelcontextprotocol.io/" target="_blank" rel="noopener">Model Context Protocol</a> server. Drop one block into your Claude Desktop / Cursor / Cline config and the entire backend appears as live tools and resources — same masks, same auth, same self-documenting errors. No SDK to install, no schema to translate.</p>
+            </div>
+
+            <div class="mcp-configs">
+                <article class="mcp-config">
+                    <span class="mcp-badge">Local · stdio</span>
+                    <h3>For local development</h3>
+                    <p>Add to <code>claude_desktop_config.json</code>:</p>
+                    <pre><code>{
+  "mcpServers": {
+    "myapp": {
+      "command": "php",
+      "args": [
+        "vendor/shape/shape/bin/shape-mcp",
+        ".env"
+      ]
+    }
+  }
+}</code></pre>
+                    <p class="mcp-config-note">Spawns the PHP MCP server, reads <code>.env</code>, exposes every entity, mask, command, and resource. Default role: admin (overridable via <code>SHAPE_MCP_ROLE</code>).</p>
+                </article>
+                <article class="mcp-config">
+                    <span class="mcp-badge mcp-badge-alt">Hosted · streamable-HTTP</span>
+                    <h3>For deployed backends</h3>
+                    <p>Same Shape app already serving HTTP also serves MCP at <code>/api.php?mcp</code>:</p>
+                    <pre><code>{
+  "mcpServers": {
+    "myapp": {
+      "url": "https://api.myapp.com/api.php?mcp",
+      "headers": {
+        "Authorization": "Bearer eyJhbGc..."
+      }
+    }
+  }
+}</code></pre>
+                    <p class="mcp-config-note">Auth flows through the same <code>JwtGuard</code>; the role from the JWT drives <code>tools/list</code> filtering. CORS preflight already configured.</p>
+                </article>
+            </div>
+
+            <div class="mcp-pillars">
+                <article class="mcp-pillar">
+                    <p class="kicker">The wedge</p>
+                    <h3><code>shape://README.md</code> as a click-attachable resource.</h3>
+                    <p>Most MCP servers expose tools and let the LLM guess. Shape exposes a <strong>narrated, human-readable overview of the entire backend</strong> as an MCP resource: every entity, mask, command, soft-delete column, role, and auth flow, generated live from the schema. Attach it once per session and the agent has the full surface area as context before its first tool call. Postgres MCP, GitHub MCP, Filesystem MCP — none of them give you the whole spec as a first-class resource. Shape can.</p>
+                </article>
+                <article class="mcp-pillar">
+                    <h3>Auth-aware tool list</h3>
+                    <p><code>tools/list</code> filters to what the caller's role can actually call. An agent connected as <code>user</code> never sees <code>users_adminList</code>; an agent connected as <code>admin</code> does. The agent never wastes tokens trying calls it'd get 403'd on — the tool list itself encodes the policy.</p>
+                </article>
+                <article class="mcp-pillar">
+                    <h3>Self-documenting errors flow through</h3>
+                    <p>A failing tool call returns <code>isError: true</code> with Shape's standard envelope: <code>code</code>, <code>message</code>, <code>expected</code>, <code>example</code>, <code>hint</code>. The agent corrects the call without re-fetching the manifest. Every retry-loop saving the HTTP API gives, applied to MCP too.</p>
+                </article>
+                <article class="mcp-pillar">
+                    <h3>One source of truth</h3>
+                    <p>Tools are derived from the same <code>LlmToolGenerator</code> that powers <code>?manifest&amp;format=anthropic-tools</code>. Resources come from <code>ManifestGenerator</code>. Tool calls dispatch through <code>BatchExecutor</code> — the same code path as the HTTP API. There is no parallel "MCP layer" with its own bugs.</p>
+                </article>
+                <article class="mcp-pillar">
+                    <h3>Every Shape convention respected</h3>
+                    <p>Soft-delete tables auto-filter <code>deleted_at IS NULL</code> on reads through MCP too. Secret tables (<code>users</code>, <code>refresh_tokens</code>) stay hidden. Admin masks expose only safe columns. The MCP surface inherits the same security posture the HTTP API enforces — there is no second contract.</p>
+                </article>
+                <article class="mcp-pillar">
+                    <h3>Two transports, one protocol class</h3>
+                    <p>Stdio for Claude Desktop on a developer's machine. Streamable-HTTP for hosted backends already on the public internet. Both wrap the same transport-agnostic <code>Shape\Mcp\McpServer</code>. Switching from local prototype to production is a config-block change, not a code change.</p>
+                </article>
+            </div>
+
+            <div class="mcp-bottomline">
+                <p class="kicker">Discoverability changes everything</p>
+                <h3>Every Claude Desktop user is now a potential Shape user.</h3>
+                <p>Before MCP, Shape was "a framework I have to remember exists." After: every developer who installs Claude Desktop, Cursor, or Cline discovers Shape the moment they need a backend they can talk to. Read the full guide in <a href="https://github.com/martiman/shape/blob/main/docs/shape/MCP.md"><code>docs/shape/MCP.md</code></a>.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="flow" class="panel panel-alt">
+        <div class="container">
+            <div class="section-head">
+                <p class="kicker">Quick Start</p>
+                <h2>Three calls and you are in motion.</h2>
+            </div>
+            <div class="flow-grid">
+                <article class="card code-card">
+                                        <h3>1. Get access token</h3>
+                                        <pre><code>POST /index.php
+{
+    "op": "auth.token",
+    "payload": {
+        "email": "user@example.com",
+        "password": "yourPassword"
+    }
+}</code></pre>
+                    <p>Response includes access_token, refresh_token, expires_in and user profile.</p>
+                </article>
+                <article class="card code-card">
+                                        <h3>2. Execute query + options</h3>
+                                        <pre><code>POST /index.php
+{
+    "op": "query",
+    "payload": {
+        "queries": [{
+            "ref": "items",
+            "sql": "itemsByOrderId",
+            "params": {"order_id": 42},
+            "options": {
+                "orderby": [{"field":"id","dir":"desc"}],
+                "top": 25,
+                "skip": 0,
+                "count": true
+            }
+        }]
+    }
+}
+Authorization: Bearer &lt;access_token&gt;</code></pre>
+                                        <p>Query executes through masks with role checks and safe option validation.</p>
+                </article>
+                <article class="card code-card">
+                    <h3>3. Rotate session</h3>
+                                        <pre><code>POST /index.php
+{
+    "op": "auth.refresh",
+    "payload": {
+        "refresh_token": "&lt;refresh_token&gt;"
+    }
+}</code></pre>
+                    <p>Refresh returns a new token pair and invalidates the previous refresh token.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+        <section id="examples" class="panel">
+                <div class="container">
+                        <div class="section-head">
+                                <p class="kicker">Examples</p>
+                                <h2>Backend contract, client behavior.</h2>
+                        </div>
+                        <div class="flow-grid">
+                                <article class="card code-card example-card">
+                                        <h3>Query example</h3>
+                                        <p class="io-label io-client">Client request</p>
+                                        <pre><code>POST /index.php
+{
+    "op": "query",
+    "payload": {
+        "queries": [{
+            "ref": "items",
+            "sql": "itemsByOrderId",
+            "params": {"order_id": 42},
+            "options": {
+                "orderby": [{"field": "id", "dir": "desc"}],
+                "top": 25,
+                "count": true
+            }
+        }]
+    }
+}</code></pre>
+                                        <p class="io-label io-server">Server response</p>
+                                        <pre><code>{
+    "results": [{
+        "ref": "items",
+        "meta": {"columns": ["id", "product_id"], "rows": 25},
+        "rows": [[91, 77], [90, 61]],
+        "count": 25,
+        "total_count": 63
+    }]
+}</code></pre>
+                                        <div class="behavior-box">
+                                                <strong>Client behavior</strong>
+                                                <p>Render the current page, show total count for pagination, and sort indicator in the table header.</p>
+                                                <strong>Use case</strong>
+                                                <p>Order detail screen loading item rows with paging and sorting.</p>
+                                        </div>
+                                </article>
+                                <article class="card code-card example-card">
+                                        <h3>Validation example</h3>
+                                        <p class="io-label io-client">Client request</p>
+                                        <pre><code>POST /index.php
+{
+    "op": "mutation",
+    "payload": {
+        "transaction": false,
+        "mutations": [{
+            "table": "products",
+            "action": "update",
+            "ref": "bad_price",
+            "filter": {"id": 42},
+            "data": {"price": -15}
+        }]
+    }
+}</code></pre>
+                                        <p class="io-label io-server">Server response</p>
+                                        <pre><code>{
+    "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Price must be positive"
+    }
+}</code></pre>
+                                        <div class="behavior-box">
+                                                <strong>Client behavior</strong>
+                                                <p>Keep the form open, highlight the price field, and show the validation message inline without reloading data.</p>
+                                                <strong>Use case</strong>
+                                                <p>Back-office product editor preventing invalid pricing before save.</p>
+                                        </div>
+                                </article>
+                                <article class="card code-card example-card">
+                                        <h3>Hook example</h3>
+                                        <p class="io-label io-client">Client request</p>
+                                        <pre><code>POST /index.php
+{
+    "op": "mutation",
+    "payload": {
+        "transaction": false,
+        "mutations": [{
+            "table": "products",
+            "action": "update",
+            "ref": "hooked_update",
+            "filter": {"id": 42},
+            "data": {"price": 109.99, "stock": 12}
+        }]
+    }
+}</code></pre>
+                                        <p class="io-label io-server">Server response</p>
+                                        <pre><code>{
+    "results": [{
+        "ref": "hooked_update",
+        "action": "update",
+        "table": "products",
+        "affected": 1
+    }]
+}</code></pre>
+                                        <div class="behavior-box">
+                                                <strong>Server behavior</strong>
+                                                <p>Configured before-hook can check policy; after-hook can write logs, invalidate cache, or notify another system.</p>
+                                                <strong>Client behavior</strong>
+                                                <p>Show success toast and refetch product detail if hooks can affect derived data shown on screen.</p>
+                                        </div>
+                                </article>
+                                <article class="card code-card example-card">
+                                        <h3>Transaction example</h3>
+                                        <p class="io-label io-client">Client request</p>
+                                        <pre><code>POST /index.php
+{
+    "op": "mutation",
+    "payload": {
+        "transaction": true,
+        "mutations": [
+            {
+                "table": "orders",
+                "action": "insert",
+                "ref": "new_order",
+                "data": {"user_id": 1, "total": 199.99, "status": "pending"}
+            },
+            {
+                "table": "order_items",
+                "action": "insert",
+                "data": {"order_id": 1, "product_id": 42, "quantity": 2, "price": 99.99}
+            }
+        ]
+    }
+}</code></pre>
+                                        <p class="io-label io-server">Server response</p>
+                                        <pre><code>{
+    "results": [
+        {"ref": "new_order", "action": "insert", "table": "orders", "affected": 1},
+        {"ref": null, "action": "insert", "table": "order_items", "affected": 1}
+    ]
+}</code></pre>
+                                        <div class="behavior-box">
+                                                <strong>Client behavior</strong>
+                                                <p>Treat success as one atomic operation. If the request fails, show one checkout error and do not partially update UI state.</p>
+                                                <strong>Use case</strong>
+                                                <p>Create order header and items together during checkout.</p>
+                                        </div>
+                                </article>
+                                <article class="card code-card example-card">
+                                        <h3>Command example</h3>
+                                        <p class="io-label io-client">Client request</p>
+                                        <pre><code>POST /index.php
+{
+    "op": "command",
+    "payload": {
+        "name": "order.process",
+        "params": {
+            "order_id": 42,
+            "payment_method": "credit_card"
+        }
+    }
+}</code></pre>
+                                        <p class="io-label io-server">Server response</p>
+                                        <pre><code>{
+    "status": 200,
+    "order_id": 42,
+    "new_status": "processing",
+    "mutations_applied": 2
+}</code></pre>
+                                        <div class="behavior-box">
+                                                <strong>Client behavior</strong>
+                                                <p>Advance the order UI to the next step, refresh status badges, and show a workflow-specific success message.</p>
+                                                <strong>Use case</strong>
+                                                <p>Checkout, billing, onboarding, batch shipping, or other domain workflow that is bigger than plain CRUD.</p>
+                                        </div>
+                                </article>
+                        </div>
+
+                            <div class="section-head" style="margin-top:1.4rem;">
+                                <h2 style="font-size:1.25rem;">testapp application examples (full capability map)</h2>
+                            </div>
+                            <table class="api-table">
+                                <thead>
+                                    <tr>
+                                        <th>Capability</th>
+                                        <th>Client call</th>
+                                        <th>testapp behavior</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Login / session start</td>
+                                        <td><code>op=auth.token</code></td>
+                                        <td>Stores access + refresh tokens and enters authenticated app shell.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Session renewal</td>
+                                        <td><code>op=auth.refresh</code></td>
+                                        <td>Rotates token pair in background and keeps user signed in.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Logout</td>
+                                        <td><code>op=auth.logout</code></td>
+                                        <td>Revokes refresh token and clears local auth state immediately.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Admin user management</td>
+                                        <td><code>op=auth.admin.create-user</code>, <code>op=auth.admin.change-password</code></td>
+                                        <td>Provisioning screen for managed users with role-gated admin actions.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Role-aware masked query</td>
+                                        <td><code>op=query</code> + <code>sql</code> mask + params</td>
+                                        <td>Data pages load only allowed datasets; forbidden masks show 403 UX.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Advanced query options</td>
+                                        <td><code>orderby/skip/top/count/groupby/aggregate</code></td>
+                                        <td>Supports pagination, sortable tables, totals, grouped analytics widgets.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>CRUD mutation</td>
+                                        <td><code>op=mutation</code> + <code>insert/update/delete</code></td>
+                                        <td>Form save/delete operations with affected-row feedback.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Atomic multi-step write</td>
+                                        <td><code>op=mutation</code> + <code>payload.transaction=true</code></td>
+                                        <td>Checkout-like flows either fully succeed or fully fail.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Validation and hooks</td>
+                                        <td>Server config validators + before/after hooks</td>
+                                        <td>Inline validation errors in client; server side effects (cache/log/notify) after success.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Business workflows</td>
+                                        <td><code>op=command</code> (e.g. <code>order.process</code>)</td>
+                                        <td>Single action button can execute full domain process with one API call.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div class="flow-grid capabilities-grid">
+                                <article class="card code-card">
+                                    <h3>Analytics dashboard query</h3>
+                                    <pre><code>{
+                  "op": "query",
+                  "payload": {
+                    "queries": [{
+                      "ref": "sales",
+                      "sql": "salesByDay",
+                      "options": {
+                    "groupby": ["day"],
+                    "aggregate": [{"field":"amount","fn":"sum","as":"total_amount"}],
+                    "orderby": [{"field":"day","dir":"asc"}]
+                      }
+                    }]
+                  }
+                }</code></pre>
+                                    <p>Client renders chart series from grouped totals.</p>
+                                </article>
+                                <article class="card code-card">
+                                    <h3>Admin provisioning</h3>
+                                    <pre><code>{
+                  "op": "auth.admin.create-user",
+                  "payload": {
+                    "email": "agent@example.com",
+                    "password": "StrongPass123",
+                    "role": "user"
+                  }
+                }</code></pre>
+                                    <p>Client updates user management table after <code>201</code> response.</p>
+                                </article>
+                                <article class="card code-card">
+                                    <h3>Workflow command button</h3>
+                                    <pre><code>{
+                  "op": "command",
+                  "payload": {
+                    "name": "orders.ship_batch",
+                    "params": {
+                      "order_ids": [101, 102, 103],
+                      "carrier": "dhl"
+                    }
+                  }
+                }</code></pre>
+                                    <p>Client shows one progress action for a multi-step backend workflow.</p>
+                                </article>
+                            </div>
+                </div>
+        </section>
+
+    <section id="endpoints" class="panel">
+        <div class="container">
+            <div class="section-head">
+                <p class="kicker">Reference</p>
+                <h2>Endpoint and operations.</h2>
+            </div>
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Usage</th>
+                        <th>Auth</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>/index.php</td>
+                        <td>GET</td>
+                        <td>Health status and API info</td>
+                        <td>No</td>
+                    </tr>
+                    <tr>
+                        <td>/index.php</td>
+                        <td>POST</td>
+                        <td><code>op=auth.token</code> or <code>op=auth.login</code></td>
+                        <td>No</td>
+                    </tr>
+                    <tr>
+                        <td>/index.php</td>
+                        <td>POST</td>
+                        <td><code>op=auth.refresh</code></td>
+                        <td>No</td>
+                    </tr>
+                    <tr>
+                        <td>/index.php</td>
+                        <td>POST</td>
+                        <td><code>op=auth.logout</code></td>
+                        <td>No</td>
+                    </tr>
+                    <tr>
+                        <td>/index.php</td>
+                        <td>POST</td>
+                        <td><code>op=query</code> with masks and options</td>
+                        <td>Yes</td>
+                    </tr>
+                    <tr>
+                        <td>/index.php</td>
+                        <td>POST</td>
+                        <td><code>op=auth.admin.create-user</code></td>
+                        <td>Yes (admin)</td>
+                    </tr>
+                    <tr>
+                        <td>/index.php</td>
+                        <td>POST</td>
+                        <td><code>op=auth.admin.change-password</code></td>
+                        <td>Yes (admin)</td>
+                    </tr>
+                    <tr>
+                        <td>/index.php</td>
+                        <td>POST</td>
+                        <td><code>op=mutation</code> (insert/update/delete)</td>
+                        <td>Yes</td>
+                    </tr>
+                    <tr>
+                        <td>/index.php</td>
+                        <td>POST</td>
+                        <td><code>op=command</code> (domain workflows)</td>
+                        <td>Yes</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="section-head" style="margin-top:1.2rem;">
+                <h2 style="font-size:1.25rem;">Query options (per query)</h2>
+            </div>
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Option</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>orderby</code></td><td>array</td><td>Sort by one or more fields with <code>asc</code> or <code>desc</code>.</td></tr>
+                    <tr><td><code>top</code></td><td>int</td><td>Maximum rows returned (current max: 200).</td></tr>
+                    <tr><td><code>skip</code></td><td>int</td><td>Offset before returning rows.</td></tr>
+                    <tr><td><code>count</code></td><td>bool</td><td>Include <code>total_count</code> before paging.</td></tr>
+                    <tr><td><code>groupby</code></td><td>array</td><td>Group rows by selected fields.</td></tr>
+                    <tr><td><code>aggregate</code></td><td>array</td><td>Aggregate with <code>count|sum|avg|min|max</code>.</td></tr>
+                </tbody>
+            </table>
+
+            <div class="section-head" style="margin-top:1.2rem;">
+                <h2 style="font-size:1.25rem;">Business features</h2>
+            </div>
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Where</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Transactions</td><td><code>op=mutation</code></td><td>Set <code>payload.transaction=true</code> to make multi-step writes atomic.</td></tr>
+                    <tr><td>Validators</td><td>Config</td><td>Register field-level validators per <code>table.action</code> to reject invalid business data.</td></tr>
+                    <tr><td>Hooks</td><td>Config</td><td>Run before/after hooks for side effects like notifications, logs, or cache invalidation.</td></tr>
+                    <tr><td>Commands</td><td><code>op=command</code></td><td>Execute domain operations like <code>order.process</code> or <code>inventory.adjust</code>.</td></tr>
+                </tbody>
+            </table>
+
+            <div class="section-head" style="margin-top:1.2rem;">
+                <h2 style="font-size:1.25rem;">Common use cases</h2>
+            </div>
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Use case</th>
+                        <th>Pattern</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Checkout pipeline</td><td><code>command(order.process)</code> + transactional stock/order updates</td></tr>
+                    <tr><td>User onboarding</td><td><code>command(user.register)</code> + validators + profile bootstrap hooks</td></tr>
+                    <tr><td>Inventory synchronization</td><td><code>command(inventory.adjust)</code> + after hook to invalidate cache</td></tr>
+                    <tr><td>Bulk fulfillment</td><td><code>command(orders.ship_batch)</code> + transaction across multiple order updates</td></tr>
+                </tbody>
+            </table>
+
+            <div class="status-grid">
+                <p><strong>200</strong> Request accepted</p>
+                <p><strong>201</strong> Resource created</p>
+                <p><strong>400</strong> Invalid payload</p>
+                <p><strong>401</strong> Missing or invalid auth</p>
+                <p><strong>403</strong> Role restriction hit</p>
+                <p><strong>404</strong> Route unavailable</p>
+                <p><strong>409</strong> Conflict with current state</p>
+                <p><strong>500</strong> Server-side fault</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="panel panel-alt contact">
+        <div class="container">
+            <div class="section-head">
+                <p class="kicker">Contact</p>
+                <h2>Build with us.</h2>
+            </div>
+            <p class="contact-copy">Need onboarding, endpoint access, or integration support? Reach out and we will get you connected fast.</p>
+            <div class="contact-links">
+                
+                
+            </div>
+        </div>
+    </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>ShapeRuntime by Urbidata. Built for practical speed.</p>
+            <p class="host-ip-line">
+                Hosted on <code id="host-ip">resolving&hellip;</code>
+            </p>
+        </div>
+    </footer>
+    <script>
+    // Server's actual IP comes from the sidecar `ip.php` endpoint, which
+    // reads $_SERVER['SERVER_ADDR'] (or falls back to
+    // gethostbyname(gethostname())). Plain text response, one line, no
+    // caching. The placeholder is replaced as soon as the fetch resolves.
+    (function () {
+        var el = document.getElementById('host-ip');
+        if (!el) return;
+        fetch('ip.php', { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.text() : 'unresolved'; })
+            .then(function (txt) { el.textContent = (txt || 'unknown').trim(); })
+            .catch(function () { el.textContent = 'unresolved'; });
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+meta {
+  name: List Authors
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api.php
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "op": "query",
+    "payload": {
+      "queries": [
+        { "ref": "authors", "sql": "authors.list", "params": {} }
+      ]
+    }
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("returns 3 authors", function() {
+    expect(res.body.results[0].count).to.equal(3);
+  });
+}

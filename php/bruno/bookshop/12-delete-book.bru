@@ -1,0 +1,42 @@
+meta {
+  name: Delete Inserted Book
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/api.php
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "op": "mutation",
+    "payload": {
+      "mutations": [
+        {
+          "table": "books",
+          "action": "delete",
+          "ref": "cleanup",
+          "filter": { "title": "Children of Dune" }
+        }
+      ]
+    }
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("row deleted", function() {
+    expect(res.body.results[0].affected).to.equal(1);
+  });
+}

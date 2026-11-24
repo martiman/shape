@@ -1,0 +1,35 @@
+meta {
+  name: Manifest - API Discovery
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api.php
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "op": "manifest"
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("has entities array", function() {
+    expect(res.body.entities).to.be.an("array");
+  });
+
+  test("has commands array", function() {
+    expect(res.body.commands).to.be.an("array");
+  });
+}
