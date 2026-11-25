@@ -67,6 +67,7 @@ cd php
 composer install
 cp apps/bookshop/config/env.example.php apps/bookshop/config/env.local.php   # set jwt_secret
 sqlite3 apps/bookshop/database/bookshop.sqlite < apps/bookshop/database/schema.sqlite.sql
+# MySQL instead: mysql -u USER -p DBNAME < apps/bookshop/database/schema.mysql.sql, and set the DSN in env.local.php
 php -S 127.0.0.1:8099 -t apps/bookshop/public
 ```
 Create a user (hash with `password_hash`) in the `users` table, then log in via `POST /api.php` with `{"op":"auth.token","payload":{"email":"...","password":"..."}}`.

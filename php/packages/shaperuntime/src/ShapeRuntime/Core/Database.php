@@ -138,7 +138,7 @@ final class Database
             $stmt->execute();
             return $stmt->rowCount();
         } catch (PDOException $e) {
-            throw new ApiException('DB_ERROR', 'Database mutation failed.', 500);
+            throw self::mutationError($e);
         }
     }
 
@@ -179,7 +179,7 @@ final class Database
             }
             return (int)$this->pdo->lastInsertId();
         } catch (PDOException $e) {
-            throw new ApiException('DB_ERROR', 'Database mutation failed.', 500);
+            throw self::mutationError($e);
         }
     }
 
@@ -269,7 +269,7 @@ final class Database
                     $pdo->exec('ROLLBACK TO SAVEPOINT shape_pk_alloc');
                 }
                 if (!self::isPkAllocationRace($e)) {
-                    throw new ApiException('DB_ERROR', 'Database mutation failed.', 500);
+                    throw self::mutationError($e);
                 }
             }
         }
@@ -338,6 +338,34 @@ final class Database
     }
 
     /**
+     * Translate a failed write into a self-documenting error. Constraint
+     * violations (unique, foreign key, not-null) are client-correctable, so
+     * they get a specific code + hint instead of a generic DB_ERROR; anything
+     * else stays an opaque 500 so driver messages never leak.
+     */
+    private static function mutationError(PDOException $e): ApiException
+    {
+        $info = is_array($e->errorInfo) ? $e->errorInfo : [];
+        $state = isset($info[0]) ? (string)$info[0] : (string)$e->getCode();
+        $code = isset($info[1]) ? (int)$info[1] : 0;
+        $msg = strtolower((string)($info[2] ?? $e->getMessage()));
+
+        $detail = null;
+        if (in_array($code, [1062, 2627, 2601], true) || $state === '23505' || str_contains($msg, 'unique constraint failed')) {
+            $detail = ['UNIQUE_VIOLATION', 'A row with the same unique value already exists.', 'Use a different value for the unique column(s), or update the existing row instead.'];
+        } elseif (in_array($code, [1451, 1452, 547], true) || $state === '23503' || str_contains($msg, 'foreign key constraint failed')) {
+            $detail = ['FK_VIOLATION', 'Foreign key constraint failed: the referenced row does not exist, or other rows still reference this one.', 'Check that every *_id value points at an existing row, or delete/detach dependent rows first.'];
+        } elseif (in_array($code, [1048, 1364, 515], true) || $state === '23502' || str_contains($msg, 'not null constraint failed')) {
+            $detail = ['NOT_NULL_VIOLATION', 'A required column was null or missing.', 'Provide a value for every NOT NULL column; see the manifest for nullable flags.'];
+        }
+        if ($detail === null) {
+            return new ApiException('DB_ERROR', 'Database mutation failed.', 500);
+        }
+
+        return new ApiException('CONSTRAINT_VIOLATION', $detail[1], 409, null, ['detail' => $detail[0], 'hint' => $detail[2]]);
+    }
+
+    /**
      * Unique violation (SQLSTATE 23000/23505; sqlsrv 2627/2601, mysql 1062)
      * or sqlsrv deadlock victim (1205) — the errors the allocation loop may
      * retry. Everything else is a real failure and must not be masked.
@@ -390,6 +418,9 @@ final class Database
             }
 
             $rows = self::normalizeRows(array_map('array_values', $assocRows));
+            if ($this->driver === 'mysql' && $rows !== []) {
+                $rows = $this->castMysqlDecimals($stmt, $rows);
+            }
 
             return [
                 'columns' => $columns,
@@ -421,6 +452,38 @@ final class Database
                 }
             }
             unset($val);
+        }
+        unset($row);
+        return $rows;
+    }
+
+    /**
+     * MySQL returns DECIMAL as a string; SQLite/doubles come back as numbers.
+     * Cast DECIMAL columns to float so the JSON contract matches across
+     * drivers. getColumnMeta is a local call on mysqlnd (no round trip).
+     *
+     * @param array<int, array<int, mixed>> $rows
+     * @return array<int, array<int, mixed>>
+     */
+    private function castMysqlDecimals(\PDOStatement $stmt, array $rows): array
+    {
+        $idx = [];
+        $n = $stmt->columnCount();
+        for ($i = 0; $i < $n; $i++) {
+            $meta = $stmt->getColumnMeta($i);
+            if (is_array($meta) && in_array($meta['native_type'] ?? null, ['NEWDECIMAL', 'DECIMAL'], true)) {
+                $idx[] = $i;
+            }
+        }
+        if ($idx === []) {
+            return $rows;
+        }
+        foreach ($rows as &$row) {
+            foreach ($idx as $i) {
+                if (isset($row[$i]) && is_string($row[$i]) && is_numeric($row[$i])) {
+                    $row[$i] = (float)$row[$i];
+                }
+            }
         }
         unset($row);
         return $rows;

@@ -274,9 +274,14 @@ final class ManifestGenerator
     private function displayType(FieldMeta $field): string
     {
         $type = $field->dbType;
-        if ($field->precision !== null && $field->scale !== null) {
+        $base = strtolower($type);
+        // Show precision/scale only for exact-decimal types and length only for
+        // bounded character types. Integer display widths (int(10,0)) and text
+        // byte limits (text(65535)) are driver noise that differ per database.
+        if (in_array($base, ['decimal', 'numeric', 'money', 'smallmoney'], true)
+            && $field->precision !== null && $field->scale !== null) {
             $type .= "({$field->precision},{$field->scale})";
-        } elseif ($field->length !== null) {
+        } elseif ($field->length !== null && in_array($base, ['varchar', 'char', 'nvarchar', 'nchar', 'varbinary', 'binary'], true)) {
             $type .= "({$field->length})";
         }
         if ($field->unsigned) {
