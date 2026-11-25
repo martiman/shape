@@ -186,9 +186,14 @@ public sealed class ManifestGenerator
     private static string DisplayType(FieldMeta field)
     {
         var type = field.DbType;
-        if (field.Precision.HasValue && field.Scale.HasValue)
+        var baseType = type.ToLowerInvariant();
+        // Precision/scale only for exact decimals, length only for bounded character
+        // types; integer display widths and text byte limits are driver noise.
+        if (baseType is "decimal" or "numeric" or "money" or "smallmoney"
+            && field.Precision.HasValue && field.Scale.HasValue)
             type += $"({field.Precision.Value},{field.Scale.Value})";
-        else if (field.Length.HasValue)
+        else if (field.Length.HasValue
+            && baseType is "varchar" or "char" or "nvarchar" or "nchar" or "varbinary" or "binary")
             type += $"({field.Length.Value})";
 
         if (field.Unsigned)

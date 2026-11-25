@@ -107,7 +107,7 @@ public sealed class Database : IDisposable
         }
         catch (DbException ex)
         {
-            throw DbError("Database mutation failed", ex);
+            throw MutationError("Database mutation failed", ex);
         }
     }
 
@@ -191,7 +191,7 @@ public sealed class Database : IDisposable
         }
         catch (DbException ex)
         {
-            throw DbError("Insert returning id failed", ex);
+            throw MutationError("Insert returning id failed", ex);
         }
     }
 
@@ -317,7 +317,7 @@ public sealed class Database : IDisposable
                     Rollback();
 
                 if (!IsPkAllocationRace(ex))
-                    throw DbError("Insert with manual PK allocation failed", ex);
+                    throw MutationError("Insert with manual PK allocation failed", ex);
 
                 if (attempt >= maxAttempts)
                 {
@@ -437,6 +437,43 @@ public sealed class Database : IDisposable
         foreach (var (key, value) in parameters)
             dp.Add(key, value);
         return dp;
+    }
+
+    /// <summary>
+    /// Map unique / foreign-key / not-null violations to a 409 CONSTRAINT_VIOLATION
+    /// with an actionable hint; anything else stays an opaque DB_ERROR.
+    /// </summary>
+    private static ApiException MutationError(string summary, DbException ex)
+    {
+        var code = DriverErrorCode(ex);
+        var state = ex.SqlState ?? "";
+        var msg = ex.Message.ToLowerInvariant();
+
+        string? kind = null, message = null, hint = null;
+        if (code is "1062" or "2627" or "2601" || state == "23505" || msg.Contains("unique constraint failed"))
+        {
+            kind = "UNIQUE_VIOLATION";
+            message = "A row with the same unique value already exists.";
+            hint = "Use a different value for the unique column(s), or update the existing row instead.";
+        }
+        else if (code is "1451" or "1452" or "547" || state == "23503" || msg.Contains("foreign key constraint failed"))
+        {
+            kind = "FK_VIOLATION";
+            message = "Foreign key constraint failed: the referenced row does not exist, or other rows still reference this one.";
+            hint = "Check that every *_id value points at an existing row, or delete/detach dependent rows first.";
+        }
+        else if (code is "1048" or "1364" or "515" || state == "23502" || msg.Contains("not null constraint failed"))
+        {
+            kind = "NOT_NULL_VIOLATION";
+            message = "A required column was null or missing.";
+            hint = "Provide a value for every NOT NULL column; see the manifest for nullable flags.";
+        }
+
+        if (kind is null)
+            return DbError(summary, ex);
+
+        return new ApiException("CONSTRAINT_VIOLATION", message!, 409, null,
+            new Dictionary<string, object?> { ["detail"] = kind, ["hint"] = hint }, ex);
     }
 
     private static ApiException DbError(string summary, DbException ex)
