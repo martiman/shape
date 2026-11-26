@@ -865,7 +865,7 @@ final class ShapeRouter
      * @param array<string, mixed> $config
      * @param array<string, mixed> $shapeData
      */
-    private static function buildExecutor(array $config, array $shapeData, Database $database, MaskRegistry $registry, ValidatorRegistry $validators): BatchExecutor
+    public static function buildExecutor(array $config, array $shapeData, Database $database, MaskRegistry $registry, ValidatorRegistry $validators): BatchExecutor
     {
         $executor = new BatchExecutor($database, $registry, $validators);
         if (is_array($config['tenancy'] ?? null) || is_array($config['scopes'] ?? null)) {

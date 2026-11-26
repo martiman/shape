@@ -660,19 +660,14 @@ final class LoginService
     }
 
     /**
+     * The claims a token for this user row carries (role, tenant and dimension-scope claims) — the
+     * single place that decides what a user is allowed to see, shared by login and by system jobs.
+     *
      * @param array<string, mixed> $user
-     * @param ?string $refreshToken Null on the stateless auth.exchange path —
-     *   the client re-exchanges its external token instead of rotating a
-     *   Shape refresh token; the refresh keys are then omitted entirely.
      * @return array<string, mixed>
      */
-    private function buildTokenResponse(array $user, ?string $refreshToken, int $refreshTtl): array
+    private function buildClaims(array $user): array
     {
-        $ttl = (int)($this->authConfig['access_token_ttl'] ?? 3600);
-        if ($ttl < 60) {
-            $ttl = 60;
-        }
-
         // Local users carry int PKs; exchanged identities may carry the app's
         // native id type (ASP.NET Identity Guids, uuids) — keep non-numeric
         // ids verbatim instead of collapsing them to 0 through an int cast.
@@ -725,6 +720,57 @@ final class LoginService
             $value = $value !== null && $value !== '' ? $this->normalizeTenantId($value) : null;
             $claims[$claim] = ($spec['multi'] ?? false) ? ($value === null ? [] : [$value]) : $value;
         }
+
+        return $claims;
+    }
+
+    /**
+     * Auth context of a stored, active user — exactly what that user's own token would carry — so a
+     * system job (e.g. e-mail notifications) can run a mask and see only what the user may see.
+     * Null for an unknown or inactive user or a suspended tenant.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function authContextForEmail(string $email): ?array
+    {
+        $row = $this->findUserByEmail($email);
+        if ($row === null || (int)($row['is_active'] ?? 1) !== 1) {
+            return null;
+        }
+        $role = (string)($row['role'] ?? 'user');
+        $tenantCol = $this->tenantColumn();
+        if ($tenantCol !== null && !$this->isUnscopedRole($role)) {
+            try {
+                $this->assertTenantActive(isset($row[$tenantCol]) ? $this->normalizeTenantId($row[$tenantCol]) : null);
+            } catch (ApiException) {
+                return null;
+            }
+        }
+        $claims = $this->buildClaims($row);
+        $claims['id'] = (int)($row['id'] ?? 0);
+        return $claims;
+    }
+
+    /**
+     * @param array<string, mixed> $user
+     * @param ?string $refreshToken Null on the stateless auth.exchange path —
+     *   the client re-exchanges its external token instead of rotating a
+     *   Shape refresh token; the refresh keys are then omitted entirely.
+     * @return array<string, mixed>
+     */
+    private function buildTokenResponse(array $user, ?string $refreshToken, int $refreshTtl): array
+    {
+        $ttl = (int)($this->authConfig['access_token_ttl'] ?? 3600);
+        if ($ttl < 60) {
+            $ttl = 60;
+        }
+
+        $claims = $this->buildClaims($user);
+        $idValue = $user['id'] ?? 0;
+        $idInt = is_numeric($idValue) ? (int)$idValue : 0;
+        $role = (string)($user['role'] ?? 'user');
+        $displayName = (string)($user['display_name'] ?? '');
+        $tenantCol = $this->tenantColumn();
 
         $accessToken = $this->issuer->issue($claims, $ttl);
 

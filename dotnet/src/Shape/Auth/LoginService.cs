@@ -671,11 +671,12 @@ public sealed class LoginService
         return BuildTokenResponse(user, refreshToken, refreshTtl);
     }
 
-    private Dictionary<string, object?> BuildTokenResponse(
-        Dictionary<string, object?> user, string? refreshToken, int refreshTtl)
+    /// <summary>
+    /// The claims a token for this user row carries (role, tenant and dimension-scope claims) — the single
+    /// place that decides what a user may see, shared by login and by system jobs (e-mail notifications).
+    /// </summary>
+    private Dictionary<string, object?> BuildClaims(Dictionary<string, object?> user)
     {
-        var ttl = _authConfig.AccessTokenTtl;
-        if (ttl < 60) ttl = 60;
         var tenancy = _authConfig.Tenancy;
         var role = user.GetValueOrDefault("role")?.ToString() ?? "user";
         var tenantId = ResolveTenantId(user);
@@ -722,6 +723,44 @@ public sealed class LoginService
         var displayName = user.GetValueOrDefault("display_name")?.ToString() ?? "";
         if (!string.IsNullOrEmpty(displayName))
             claims["name"] = displayName;
+
+        return claims;
+    }
+
+    /// <summary>
+    /// Auth context of a stored, active user — exactly what that user's own token would carry — so a system job
+    /// can run a mask and see only what the user may see. Null for an unknown or inactive user or a suspended tenant.
+    /// </summary>
+    public Dictionary<string, object?>? AuthContextForEmail(string email)
+    {
+        using var db = new Database(_dbConfig);
+        var row = FindUserByEmail(db, email);
+        if (row == null || ToInt(row.GetValueOrDefault("is_active") ?? 1) != 1)
+            return null;
+
+        if (!TenancyResolver.IsUnscopedRole(_authConfig.Tenancy, row.GetValueOrDefault("role")?.ToString()))
+        {
+            try { TenancyResolver.EnsureTenantActive(db, _authConfig.Tenancy, row.GetValueOrDefault("tenant_id")); }
+            catch (ApiException) { return null; }
+        }
+
+        AttachScopeClaims(db, row);
+        var claims = BuildClaims(row);
+        claims["id"] = ToInt(row.GetValueOrDefault("id") ?? 0);
+        return claims;
+    }
+
+    private Dictionary<string, object?> BuildTokenResponse(
+        Dictionary<string, object?> user, string? refreshToken, int refreshTtl)
+    {
+        var ttl = _authConfig.AccessTokenTtl;
+        if (ttl < 60) ttl = 60;
+        var claims = BuildClaims(user);
+        var role = claims["role"]?.ToString() ?? "user";
+
+        var idValue = user.GetValueOrDefault("id");
+        var idInt = ToInt(idValue ?? 0);
+        var displayName = user.GetValueOrDefault("display_name")?.ToString() ?? "";
 
         var accessToken = _issuer.Issue(claims, ttl);
 

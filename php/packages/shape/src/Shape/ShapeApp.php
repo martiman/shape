@@ -28,7 +28,7 @@ final class ShapeApp
      * Read-only admin masks for audit_log are generated automatically when
      * the table is present (see _shape.audit_log_table detection below).
      */
-    private const SECRET_TABLES_BASELINE = ['users', 'refresh_tokens', 'audit_log'];
+    private const SECRET_TABLES_BASELINE = ['users', 'refresh_tokens', 'audit_log', 'notification_outbox'];
 
     /**
      * Build config from PHP entity classes (code-first).

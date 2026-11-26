@@ -86,8 +86,14 @@ public sealed class ShapeConfig
     /// </summary>
     public AuditDiffConfig? AuditDiff { get; set; }
 
-    /// <summary>Tables exposed only via <see cref="AdminMasks"/>. Defaults: <c>users</c>, <c>refresh_tokens</c>, <c>audit_log</c>.</summary>
-    public List<string> SecretTables { get; set; } = new() { "users", "refresh_tokens", "audit_log" };
+    /// <summary>
+    /// E-mail notifications (rules = mask + recipients, outbox, SMTP). Run from cron with
+    /// <c>--notify</c> (see <see cref="Shape.Notify.NotifyRunner"/>). <c>null</c> = off.
+    /// </summary>
+    public NotificationsConfig? Notifications { get; set; }
+
+    /// <summary>Tables exposed only via <see cref="AdminMasks"/>. Defaults: <c>users</c>, <c>refresh_tokens</c>, <c>audit_log</c>, <c>notification_outbox</c>.</summary>
+    public List<string> SecretTables { get; set; } = new() { "users", "refresh_tokens", "audit_log", "notification_outbox" };
 
     /// <summary>When set, restricts <c>FromDatabase</c> to only these tables (catalog scan skipped).</summary>
     public List<string>? IncludeTables { get; set; }
@@ -168,4 +174,66 @@ public sealed class AuditDiffConfig
 
     /// <summary><c>column</c> or <c>table.column</c> entries whose values are recorded as <c>[redacted]</c>.</summary>
     public List<string> Exclude { get; set; } = new();
+}
+
+
+/// <summary>The <c>notifications</c> block: transport, outbox table and rules.</summary>
+public sealed class NotificationsConfig
+{
+    public NotificationTransport Transport { get; set; } = new();
+    public string OutboxTable { get; set; } = "notification_outbox";
+    public int MaxAttempts { get; set; } = 3;
+    public Dictionary<string, NotificationRule> Rules { get; set; } = new(StringComparer.Ordinal);
+}
+
+public sealed class NotificationTransport
+{
+    /// <summary><c>log</c> (default, writes to the console), <c>smtp</c>.</summary>
+    public string Driver { get; set; } = "log";
+    public string Host { get; set; } = "";
+    public int Port { get; set; } = 587;
+    /// <summary><c>tls</c> (STARTTLS), <c>ssl</c> (implicit TLS) or <c>none</c>.</summary>
+    public string Encryption { get; set; } = "tls";
+    public string? User { get; set; }
+    public string? Pass { get; set; }
+    public string From { get; set; } = "";
+    public string FromName { get; set; } = "";
+    public int TimeoutSeconds { get; set; } = 15;
+}
+
+/// <summary>One notification rule: run a mask, mail the rows (see <c>Notifier</c>).</summary>
+public sealed class NotificationRule
+{
+    public string Mask { get; set; } = "";
+    public Dictionary<string, object?> Params { get; set; } = new();
+    public NotificationRecipients To { get; set; } = new();
+    /// <summary>Column that identifies an item (default <c>id</c>); feeds the de-duplication fingerprint.</summary>
+    public string Key { get; set; } = "id";
+    public int RepeatDays { get; set; } = 7;
+    public int MaxRows { get; set; } = 50;
+    public string Subject { get; set; } = "{rule}: {count}";
+    public string Intro { get; set; } = "";
+    public string Outro { get; set; } = "";
+    public List<string>? Columns { get; set; }
+    public Dictionary<string, string>? Labels { get; set; }
+}
+
+/// <summary>
+/// Exactly one of <see cref="Users"/> (run the mask AS each user, with their own claims),
+/// <see cref="Column"/> (rows grouped by an e-mail column) or <see cref="Emails"/> (fixed list); the last two need <see cref="RunAs"/>.
+/// </summary>
+public sealed class NotificationRecipients
+{
+    public UserRecipients? Users { get; set; }
+    public string? Column { get; set; }
+    public List<string>? Emails { get; set; }
+    /// <summary>Context the mask runs in for <c>Column</c> / <c>Emails</c>, e.g. <c>{ ["role"] = "admin" }</c>.</summary>
+    public Dictionary<string, object?>? RunAs { get; set; }
+}
+
+public sealed class UserRecipients
+{
+    public List<string> Roles { get; set; } = new();
+    /// <summary>Users whose value in this users column is 0 are skipped.</summary>
+    public string? OptoutColumn { get; set; }
 }

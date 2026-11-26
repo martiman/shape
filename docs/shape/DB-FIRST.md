@@ -970,6 +970,93 @@ Soft-delete + audit columns + audit log + secret tables + admin masks + OIDC aut
 - **No retention enforcement.** The log grows forever; document a SQL-driven retention job as part of your deployment runbook.
 - **No CDC streaming.** This is a database table, not a Kafka topic. If you need a real-time event stream, plug it into a downstream consumer of the table.
 
+## E-mail notifications
+
+"The contract ends in 30 days and nobody noticed." A notification rule is **a mask plus recipients**: the report you already have ("what is on fire") is run on a schedule and its rows are mailed. Shape stays request/response, so the schedule is a **cron job** that every shared hosting offers.
+
+```sql
+-- the queue (a secret table: never auto-CRUDed, not reachable through the API)
+CREATE TABLE notification_outbox (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  rule        VARCHAR(64)  NOT NULL,
+  recipient   VARCHAR(190) NOT NULL,
+  dedupe_key  CHAR(64)     NOT NULL,
+  subject     VARCHAR(255) NOT NULL,
+  body_text   TEXT NOT NULL,
+  body_html   TEXT NULL,
+  status      VARCHAR(16)  NOT NULL DEFAULT 'pending',   -- pending | sent | failed
+  attempts    INT NOT NULL DEFAULT 0,
+  last_error  TEXT NULL,
+  created_at  DATETIME NOT NULL,
+  sent_at     DATETIME NULL
+);
+CREATE INDEX idx_outbox_dedupe ON notification_outbox(rule, recipient, dedupe_key, created_at);
+```
+
+```php
+// config/database.php
+'notifications' => [
+    'transport' => ['driver' => 'smtp', 'host' => 'smtp.example.com', 'port' => 587, 'encryption' => 'tls',
+                    'user' => 'noreply@example.com', 'pass' => getenv('SMTP_PASS'),
+                    'from' => 'noreply@example.com', 'from_name' => 'Contracts'],   // 'log' (default) | 'mail' | 'smtp'
+    'max_attempts' => 3,
+    'rules' => [
+        'expiring_contracts' => [
+            'mask'        => 'contracts.expiring',            // any mask; its rows are the list
+            'params'      => ['until' => '2027-01-31'],       // mask parameters
+            'to'          => ['users' => ['roles' => ['user'], 'optout_column' => 'notify_email']],
+            'key'         => 'id',                            // column that identifies an item
+            'repeat_days' => 7,                               // the same list to the same person at most once per 7 days
+            'subject'     => 'Contracts ending soon: {count}',
+            'intro'       => 'These contracts end soon:',
+            'columns'     => ['title', 'end_date'],
+            'labels'      => ['title' => 'Contract', 'end_date' => 'Ends'],
+        ],
+    ],
+],
+```
+
+```csharp
+Notifications = new NotificationsConfig {
+    Transport = new() { Driver = "smtp", Host = "smtp.example.com", Port = 587, Encryption = "tls", User = "noreply@example.com", Pass = pass, From = "noreply@example.com" },
+    Rules = { ["expiring_contracts"] = new NotificationRule {
+        Mask = "contracts.expiring", Params = { ["until"] = "2027-01-31" },
+        To = new() { Users = new() { Roles = { "user" }, OptoutColumn = "notify_email" } },
+        Subject = "Contracts ending soon: {count}", Columns = new() { "title", "end_date" } } },
+},
+```
+
+Run it from cron (every morning at 7:00):
+
+```bash
+# PHP: bin/notify.php  =  exit(Shape\Notify\NotifyCommand::run(Shape\ShapeApp::fromDatabase(__DIR__ . '/../config/database.php'), $argv));
+0 7 * * *  php /path/to/app/bin/notify.php
+# .NET: the one-call host handles the flag
+0 7 * * *  dotnet /path/to/app/App.dll --notify
+```
+
+Options: `--rule=NAME`, `--dry-run` (show what would be queued/sent, write nothing), `--enqueue-only`, `--send-only`. Exit code `0` = fine, `1` = a rule failed or a mail failed for good — wire it to your cron mailer or monitoring.
+
+**Recipients (`to`) — exactly one of:**
+
+| `to` | Runs the mask… | Sends… |
+|---|---|---|
+| `users` (`roles`, `optout_column`) | **as each active user**, with the claims their own token would carry | one digest per user, only if they have rows |
+| `column` (+ `run_as`) | once, in the `run_as` context | rows grouped by an e-mail column of the result (`owner_email`) |
+| `emails` (+ `run_as`) | once, in the `run_as` context | the same digest to a fixed list |
+
+**Who sees what.** `users` mode builds each recipient's context through the same code a login uses (`LoginService::authContextForEmail` / `AuthContextForEmail`: role, tenant and row-scope claims), so a notification can never list a row that person could not open in the app; masks restricted to other roles simply return nothing for them. `column` and `emails` run in an explicit `run_as` (`['role' => 'admin']`) that you write down in the config — a reviewable decision, not an accident. Inactive users, users with `optout_column = 0`, and addresses that fail validation are skipped.
+
+**Two phases, so nothing is lost or doubled.** `enqueue` writes one outbox row per recipient; `deliver` sends pending rows and retries failures up to `max_attempts`, then marks them `failed` with the error. A transport outage therefore only delays mail, and a failing recipient does not block the others.
+
+**De-duplication.** Each digest gets a fingerprint of *rule + recipient + the set of item keys*. The same list is not queued again within `repeat_days`; a list that gained or lost an item is a new digest and goes out. (Items that stay on the list are mentioned again after `repeat_days`.)
+
+**Limits and hygiene.** At most `max_rows` (default 50, max 199) rows are listed per mail, with "… +N" for the rest. Subjects have line breaks removed and recipients are validated before any header is built, so row data can never inject headers. HTML escapes every cell. Bodies are sent as UTF-8 base64 (`text/plain`, plus an HTML alternative).
+
+**Transports.** `smtp` is a small built-in client (implicit TLS `ssl`, STARTTLS `tls`, or `none`; AUTH PLAIN/LOGIN) with no dependencies — fine for tens of mails per run. `mail` (PHP only) uses `mail()`, which most shared hostings route to their own sendmail. `log` writes "to + subject" only. For anything bigger implement `MailerInterface` / `IMailer` (PHPMailer, MailKit, a mail API) and pass it to `NotifyCommand::run(..., $mailer)` / `NotifyRunner.Run(..., mailer)`.
+
+**What it is not (yet):** no per-event instant mails (a cron run is the trigger; for "ticket assigned" write the outbox row from an after-hook), no unsubscribe link beyond `optout_column`, no reply handling, and no templates beyond the table layout.
+
 ## Audit columns by convention
 
 Same idea as soft-delete, but for tracking who created/updated each row and when. Add any of these columns to a table and Shape stamps them automatically on insert / update — no hooks, no triggers, no ORM annotations.
