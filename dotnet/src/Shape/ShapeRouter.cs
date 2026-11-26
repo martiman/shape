@@ -94,6 +94,13 @@ public static class ShapeRouter
                 return;
             }
 
+            // POST /pdf/<name>?<params>: generate the PDF AND store it as a private attachment (the document's `archive`).
+            if (pathInfo.StartsWith("pdf/", StringComparison.Ordinal))
+            {
+                await HandlePdf(context, config, dispatcher, pathInfo["pdf/".Length..], uploadManager, archive: true);
+                return;
+            }
+
             throw new ApiException("NOT_FOUND", $"Unknown POST path '{pathInfo}'.", 404);
         });
     }
@@ -142,7 +149,8 @@ public static class ShapeRouter
         await stream.CopyToAsync(context.Response.Body);
     }
 
-    private static async Task HandlePdf(HttpContext context, ShapeConfig config, OpDispatcher dispatcher, string name)
+    private static async Task HandlePdf(HttpContext context, ShapeConfig config, OpDispatcher dispatcher, string name,
+        UploadManager? uploadManager = null, bool archive = false)
     {
         if (config.Documents == null || config.Documents.Count == 0 || name.Length == 0)
             throw new ApiException("NOT_FOUND", config.Documents == null || config.Documents.Count == 0
@@ -150,8 +158,15 @@ public static class ShapeRouter
 
         using var database = dispatcher.CreateDatabase();
         var authContext = dispatcher.BuildGuard(database).Authorize(AdminAuth.NormalizeHeaders(context));
-        var service = new DocumentService(dispatcher.CreateExecutor(database), config.Documents);
+        var executor = dispatcher.CreateExecutor(database);
+        var service = new DocumentService(executor, config.Documents);
         var query = context.Request.Query.ToDictionary(kv => kv.Key, kv => (string?)kv.Value.ToString(), StringComparer.Ordinal);
+        if (archive)
+        {
+            var stored = await service.ArchiveAsync(name, query, authContext, new AttachmentService(uploadManager!, executor));
+            await JsonResponse.SuccessAsync(context, stored);
+            return;
+        }
         var doc = service.Render(name, query, authContext);
 
         context.Response.StatusCode = 200;

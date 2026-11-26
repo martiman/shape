@@ -57,8 +57,9 @@ final class ShapeRouter
         }
 
         // ── PDF documents: GET /api.php/pdf/<name>?<params>. Data comes from masks run in the caller's context.
-        if ($method === 'GET' && str_starts_with($pathInfo, 'pdf/')) {
-            self::wrapErrors(fn() => self::servePdf(substr($pathInfo, strlen('pdf/')), $config, $authConfig, $masks, $shapeData));
+        // POST /api.php/pdf/<name>?<params> generates the PDF AND stores it as a private attachment (`archive`).
+        if (in_array($method, ['GET', 'POST'], true) && str_starts_with($pathInfo, 'pdf/')) {
+            self::wrapErrors(fn() => self::servePdf(substr($pathInfo, strlen('pdf/')), $config, $authConfig, $masks, $shapeData, $method === 'POST'));
             return;
         }
 
@@ -912,7 +913,7 @@ final class ShapeRouter
      * @param array<string, mixed> $masks
      * @param array<string, mixed> $shapeData
      */
-    private static function servePdf(string $name, array $config, array $authConfig, array $masks, array $shapeData): void
+    private static function servePdf(string $name, array $config, array $authConfig, array $masks, array $shapeData, bool $archive = false): void
     {
         $documents = is_array($config['documents'] ?? null) ? $config['documents'] : [];
         if ($documents === [] || $name === '') {
@@ -924,12 +925,17 @@ final class ShapeRouter
             ? new JwtGuard($authConfig, $database)
             : new NullGuard();
         $auth = $guard->authorize(self::normalizeHeaders(self::readHeaders()));
-        $service = new DocumentService(
-            self::buildExecutor($config, $shapeData, $database, new MaskRegistry($masks), new ValidatorRegistry($config['validators'] ?? [])),
-            $documents
-        );
+        $executor = self::buildExecutor($config, $shapeData, $database, new MaskRegistry($masks), new ValidatorRegistry($config['validators'] ?? []));
+        $service = new DocumentService($executor, $documents);
         $qs = [];
         parse_str((string)($_SERVER['QUERY_STRING'] ?? ''), $qs);
+        if ($archive) {
+            $stored = $service->archive($name, $qs, $auth, new AttachmentService(new UploadManager(is_array($config['uploads'] ?? null) ? $config['uploads'] : []), $executor));
+            http_response_code(200);
+            header('Content-Type: application/json');
+            echo json_encode($stored, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            return;
+        }
         $doc = $service->render($name, $qs, $auth);
 
         header('Content-Type: application/pdf');

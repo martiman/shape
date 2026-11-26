@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Shape.Core;
+using Shape.Upload;
 
 namespace Shape.Pdf;
 
@@ -9,6 +10,13 @@ namespace Shape.Pdf;
 /// not see answers 404, exactly like a missing one. Configured under <c>ShapeConfig.Documents["name"]</c> with the same
 /// spec keys as the PHP <c>Shape\Pdf\DocumentService</c> (<c>mask</c>, <c>params</c>, <c>roles</c>, <c>filename</c>,
 /// <c>title</c>, <c>locale</c>, <c>footer</c>, <c>blocks</c>). Route: <c>GET /pdf/&lt;name&gt;?id=5</c>.
+/// <para>
+/// Archiving: a document with an <c>archive</c> block (<c>upload</c> = an upload entry with attachments,
+/// <c>fields</c> = attachment fields with <c>{placeholders}</c> from the document data) can also be generated AND
+/// stored as a private attachment through <c>POST /pdf/&lt;name&gt;?id=5</c> (immutable invoice copy). Every call
+/// stores a new copy; a UNIQUE index on the attachment table's parent column makes "archive once" a database
+/// guarantee. The caller needs both the document and the upload entry.
+/// </para>
 /// </summary>
 public sealed class DocumentService
 {
@@ -18,7 +26,7 @@ public sealed class DocumentService
     private readonly Dictionary<string, Dictionary<string, object?>> _documents;
     private readonly DocumentRenderer? _renderer;
 
-    public sealed record Document(byte[] Pdf, string Filename);
+    public sealed record Document(byte[] Pdf, string Filename, Dictionary<string, object?> Data);
 
     public DocumentService(BatchExecutor executor, Dictionary<string, Dictionary<string, object?>>? documents, DocumentRenderer? renderer = null)
     {
@@ -106,7 +114,33 @@ public sealed class DocumentService
         file = Regex.Replace(file, "[^A-Za-z0-9._-]+", "_").Trim('_');
         if (file.Length == 0 || !file.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
             file = (file.Length == 0 ? name : file) + ".pdf";
-        return new Document(pdf, file);
+        return new Document(pdf, file, data);
+    }
+
+    /// <summary>Render the document and store it as a private attachment (see the class comment).</summary>
+    public async Task<Dictionary<string, object?>> ArchiveAsync(
+        string name, IReadOnlyDictionary<string, string?> query, Dictionary<string, object?> authContext,
+        AttachmentService attachments, string? created = null)
+    {
+        var archive = _documents.TryGetValue(name, out var spec) ? spec.GetValueOrDefault("archive") as Dictionary<string, object?> : null;
+        var upload = archive == null ? "" : Convert.ToString(archive.GetValueOrDefault("upload")) ?? "";
+        if (archive == null || upload.Length == 0)
+        {
+            throw new ApiException("NOT_FOUND", $"Document '{name}' cannot be archived.", 404, null, new Dictionary<string, object?>
+            {
+                ["hint"] = "Add \"archive\": { \"upload\": \"<upload with attachments>\", \"fields\": { \"<col>\": \"{id}\" } } to the document."
+            });
+        }
+        var doc = Render(name, query, authContext, created);
+
+        var fields = new Dictionary<string, object?>(StringComparer.Ordinal);
+        if (archive.GetValueOrDefault("fields") is Dictionary<string, object?> fm)
+            foreach (var (k, v) in fm)
+            {
+                var m = v is string sv ? Regex.Match(sv, @"^\{([A-Za-z_][A-Za-z0-9_]*)\}$") : null;
+                fields[k] = m is { Success: true } ? doc.Data.GetValueOrDefault(m.Groups[1].Value) : v;
+            }
+        return await attachments.StoreGeneratedAsync(upload, doc.Pdf, doc.Filename, fields, authContext);
     }
 
     private List<Dictionary<string, object?>> Run(string mask, Dictionary<string, object?> parameters, Dictionary<string, object?> authContext)

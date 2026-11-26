@@ -105,6 +105,30 @@ final class UploadManager
         ];
     }
 
+    /**
+     * Store generated content (e.g. a rendered PDF) exactly as if it had been uploaded: the same role gate, size
+     * and mime rules, key generation and sha256. Used by the document archive.
+     *
+     * @param array<string, mixed> $authContext
+     * @return array<string, mixed> same shape as {@see handle()}
+     */
+    public function storeBytes(string $name, string $bytes, string $filename, array $authContext): array
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'shape-gen-');
+        if ($tmp === false || file_put_contents($tmp, $bytes) === false) {
+            throw new ApiException('UPLOAD_STORAGE_ERROR', 'Cannot write a temporary file for the generated content.', 500);
+        }
+        try {
+            return $this->handle($name, ['file' => [
+                'name' => $filename, 'type' => '', 'tmp_name' => $tmp, 'error' => UPLOAD_ERR_OK, 'size' => strlen($bytes),
+            ]], $authContext);
+        } finally {
+            if (is_file($tmp)) {
+                @unlink($tmp);   // LocalStorage moves the file; clean up when it did not (or validation failed)
+            }
+        }
+    }
+
     /** @return array<string, mixed>|null The configured upload entry, or null. */
     public function entry(string $name): ?array
     {

@@ -52,6 +52,33 @@ public sealed class AttachmentService
             data[field] = long.TryParse(v, out var n) && v.All(char.IsDigit) ? n : v;
         }
 
+        AssertParents(cfg, data, authContext);
+        return await Persist(name, cfg, data, () => _uploads.HandleAsync(name, files, authContext), authContext);
+    }
+
+    /// <summary>
+    /// Store generated content (a rendered PDF) as an attachment of the given upload entry, with the same
+    /// authorisation as an upload: role gate, parent visibility, row scopes, validators and audit.
+    /// </summary>
+    public async Task<Dictionary<string, object?>> StoreGeneratedAsync(
+        string name,
+        byte[] bytes,
+        string filename,
+        IReadOnlyDictionary<string, object?> fields,
+        Dictionary<string, object?> authContext)
+    {
+        var cfg = Config(name);
+        _uploads.Authorize(name, authContext);
+        var data = new Dictionary<string, object?>(StringComparer.Ordinal);
+        foreach (var field in cfg.Fields)
+            if (fields.TryGetValue(field, out var v)) data[field] = v;
+        AssertParents(cfg, data, authContext);
+        return await Persist(name, cfg, data,
+            () => Task.FromResult(_uploads.StoreBytes(name, bytes, filename, authContext)), authContext);
+    }
+
+    private void AssertParents(Resolved cfg, Dictionary<string, object?> data, Dictionary<string, object?> authContext)
+    {
         // Authorise the parent BEFORE storing anything.
         foreach (var (field, table) in cfg.Parents)
         {
@@ -70,8 +97,16 @@ public sealed class AttachmentService
             }
             AssertParentVisible(table, parentId, authContext);
         }
+    }
 
-        var stored = await _uploads.HandleAsync(name, files, authContext);
+    private async Task<Dictionary<string, object?>> Persist(
+        string name,
+        Resolved cfg,
+        Dictionary<string, object?> data,
+        Func<Task<Dictionary<string, object?>>> store,
+        Dictionary<string, object?> authContext)
+    {
+        var stored = await store();
         var storage = _uploads.StorageFor(name);
         var key = (string)stored["id"]!;
 

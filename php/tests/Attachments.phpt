@@ -13,6 +13,7 @@ use Shape\Metadata\DatabaseIntrospector;
 use Shape\ShapeApp;
 use Shape\Upload\AttachmentService;
 use Shape\Upload\UploadManager;
+use Shape\Pdf\DocumentService;
 use ShapeRuntime\Core\ApiException;
 use ShapeRuntime\Core\BatchExecutor;
 use ShapeRuntime\Core\Database;
@@ -118,6 +119,40 @@ Assert::count(0, glob($dir . '/*.pdf'));
 // An entry without `attachments` is not served by the service.
 $plain = new AttachmentService(new UploadManager(['covers' => ['storage' => ['driver' => 'local', 'path' => $dir]]]), $executor);
 Assert::false($plain->isAttachmentEntry('covers'));
+
+// ── Archiving a generated PDF as an attachment (documents + attachments) ───────────────────────────
+$docs = new DocumentService($executor, [
+    'case_sheet' => [
+        'mask' => 'cases.get', 'params' => ['id'], 'filename' => 'case-{id}.pdf',
+        'blocks' => [['type' => 'heading', 'text' => 'Case {title}']],
+        'archive' => ['upload' => 'case_files', 'fields' => ['case_id' => '{id}']],
+    ],
+    'plain_sheet' => ['mask' => 'cases.get', 'params' => ['id'], 'blocks' => [['type' => 'heading', 'text' => 'x']]],
+]);
+$beforeArchive = count(glob($dir . '/*.pdf') ?: []);
+$a = $docs->archive('case_sheet', ['id' => '1'], $u1, $svc, '20261126120000Z');
+Assert::same('case-1.pdf', $a['filename']);
+Assert::same('application/pdf', $a['mime_type']);
+Assert::same(1, (int)$a['case_id']);
+$o = $svc->open('case_files', (int)$a['id'], $u1);
+$stored = stream_get_contents($o['stream']);
+fclose($o['stream']);
+Assert::same('%PDF-1.4', substr($stored, 0, 8));
+Assert::same(hash('sha256', $stored), $a['sha256']);
+Assert::same(strlen($stored), $a['size']);
+Assert::same('NOT_FOUND', $catch(fn() => $svc->open('case_files', (int)$a['id'], $u2)));   // archived copy follows the case's scope
+// the caller must see the document's data: someone else's case is "not found" and nothing is stored
+Assert::same('NOT_FOUND', $catch(fn() => $docs->archive('case_sheet', ['id' => '2'], $u1, $svc)));
+Assert::same($beforeArchive + 1, count(glob($dir . '/*.pdf') ?: []));
+Assert::same('NOT_FOUND', $catch(fn() => $docs->archive('plain_sheet', ['id' => '1'], $u1, $svc)));   // no `archive` block
+Assert::same('NOT_FOUND', $catch(fn() => $docs->archive('nope', ['id' => '1'], $u1, $svc)));
+Assert::notSame('(none)', $catch(fn() => $docs->archive('case_sheet', ['id' => '1'], [], $svc)));      // anonymous
+// every call stores a NEW copy (a UNIQUE index on case_id would turn this into "archive once")
+$a2 = $docs->archive('case_sheet', ['id' => '1'], $u1, $svc, '20261126130000Z');
+Assert::notSame($a['id'], $a2['id']);
+$svc->delete('case_files', (int)$a['id'], $u1);
+$svc->delete('case_files', (int)$a2['id'], $u1);
+Assert::count(0, glob($dir . '/*.pdf'));
 
 array_map('unlink', glob($dir . '/*') ?: []);
 @rmdir($dir);

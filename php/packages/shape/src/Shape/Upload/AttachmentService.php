@@ -72,21 +72,37 @@ final class AttachmentService
             $v = $form[$field];
             $data[$field] = is_string($v) && ctype_digit($v) ? (int)$v : $v;
         }
-        // Authorise the parent BEFORE storing anything.
-        foreach ($cfg['parents'] as $field => $table) {
-            if (!isset($data[$field])) {
-                throw new ApiException(
-                    'UPLOAD_VALIDATION_ERROR',
-                    "Form field '{$field}' is required.",
-                    400,
-                    null,
-                    ['expected' => ['form' => $field], 'hint' => "Send '{$field}' next to the file in the multipart body."]
-                );
-            }
-            $this->assertParentVisible($table, $data[$field], $authContext);
-        }
+        $this->assertParents($cfg, $data, $authContext);
 
-        $stored = $this->uploads->handle($name, $files, $authContext);
+        return $this->persist($name, $cfg, $data, fn() => $this->uploads->handle($name, $files, $authContext), $authContext);
+    }
+
+    /**
+     * Store generated content (a rendered PDF) as an attachment of the given upload entry, with the same
+     * authorisation as an upload: role gate, parent visibility, row scopes, validators and audit.
+     *
+     * @param array<string, mixed> $fields   values of the declared attachment fields (e.g. ['invoice_id' => 5])
+     * @param array<string, mixed> $authContext
+     * @return array<string, mixed> the attachment descriptor, as returned by {@see upload()}
+     */
+    public function storeGenerated(string $name, string $bytes, string $filename, array $fields, array $authContext): array
+    {
+        $cfg = $this->config($name);
+        $this->uploads->authorize($name, $authContext);
+        $data = array_intersect_key($fields, array_flip($cfg['fields']));
+        $this->assertParents($cfg, $data, $authContext);
+        return $this->persist($name, $cfg, $data, fn() => $this->uploads->storeBytes($name, $bytes, $filename, $authContext), $authContext);
+    }
+
+    /**
+     * @param array{table:string, fields:list<string>, parents:array<string,string>} $cfg
+     * @param array<string, mixed> $data
+     * @param array<string, mixed> $authContext
+     * @return array<string, mixed>
+     */
+    private function persist(string $name, array $cfg, array $data, \Closure $store, array $authContext): array
+    {
+        $stored = $store();
         $storage = $this->uploads->storageFor($name);
 
         $row = $data + [
@@ -206,6 +222,29 @@ final class AttachmentService
             throw new ApiException('NOT_FOUND', 'Attachment not found.', 404);
         }
         return $row;
+    }
+
+    /**
+     * Authorise the parent rows BEFORE storing anything.
+     *
+     * @param array{table:string, fields:list<string>, parents:array<string,string>} $cfg
+     * @param array<string, mixed> $data
+     * @param array<string, mixed> $authContext
+     */
+    private function assertParents(array $cfg, array $data, array $authContext): void
+    {
+        foreach ($cfg['parents'] as $field => $table) {
+            if (!isset($data[$field])) {
+                throw new ApiException(
+                    'UPLOAD_VALIDATION_ERROR',
+                    "Form field '{$field}' is required.",
+                    400,
+                    null,
+                    ['expected' => ['form' => $field], 'hint' => "Send '{$field}' next to the file in the multipart body."]
+                );
+            }
+            $this->assertParentVisible($table, $data[$field], $authContext);
+        }
     }
 
     /** @param array<string, mixed> $authContext */

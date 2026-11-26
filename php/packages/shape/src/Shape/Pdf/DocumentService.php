@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Shape\Pdf;
 
 use ShapeRuntime\Core\ApiException;
+use Shape\Upload\AttachmentService;
 use ShapeRuntime\Core\BatchExecutor;
 
 /**
@@ -33,6 +34,19 @@ use ShapeRuntime\Core\BatchExecutor;
  *   ],
  *
  * Route (wired by ShapeRouter): GET /api.php/pdf/<name>?id=5
+ *
+ * Archiving. A document with an `archive` block can also be generated AND stored as a private attachment, which
+ * gives an immutable copy (an issued invoice, a signed-off report) that survives later data changes:
+ *
+ *   'archive' => [
+ *       'upload' => 'invoice_files',                  // an `uploads` entry with an `attachments` block
+ *       'fields' => ['invoice_id' => '{id}'],         // attachment fields; {placeholders} come from the document data
+ *   ],
+ *
+ * Route: POST /api.php/pdf/<name>?id=5 -> the attachment descriptor {id, filename, size, mime_type, sha256, ...}
+ * (download later through GET /api.php/files/<upload>/<id>). Every call stores a new copy; a UNIQUE index on the
+ * attachment table's parent column makes "archive once" a database guarantee. The caller needs both the document
+ * (mask scopes) and the upload entry (roles, parent visibility, table scopes).
  */
 final class DocumentService
 {
@@ -55,7 +69,7 @@ final class DocumentService
     /**
      * @param array<string, mixed> $query request parameters (only the declared `params` are used)
      * @param array<string, mixed> $authContext
-     * @return array{pdf:string, filename:string}
+     * @return array{pdf:string, filename:string, data:array<string, mixed>}
      */
     public function render(string $name, array $query, array $authContext, ?string $created = null, bool $compress = true): array
     {
@@ -128,7 +142,36 @@ final class DocumentService
         if ($file === '' || !str_ends_with(strtolower($file), '.pdf')) {
             $file = ($file === '' ? $name : $file) . '.pdf';
         }
-        return ['pdf' => $pdf, 'filename' => $file];
+        return ['pdf' => $pdf, 'filename' => $file, 'data' => $data];
+    }
+
+    /**
+     * Render the document and store it as a private attachment (see the class comment).
+     *
+     * @param array<string, mixed> $query
+     * @param array<string, mixed> $authContext
+     * @return array<string, mixed> the attachment descriptor
+     */
+    public function archive(string $name, array $query, array $authContext, AttachmentService $attachments, ?string $created = null): array
+    {
+        $spec = $this->documents[$name] ?? null;
+        $archive = is_array($spec) && is_array($spec['archive'] ?? null) ? $spec['archive'] : null;
+        if ($archive === null || (string)($archive['upload'] ?? '') === '') {
+            throw new ApiException(
+                'NOT_FOUND',
+                "Document '{$name}' cannot be archived.",
+                404,
+                null,
+                ['hint' => "Add 'archive' => ['upload' => '<upload with attachments>', 'fields' => ['<col>' => '{id}']] to the document."]
+            );
+        }
+        $doc = $this->render($name, $query, $authContext, $created);
+
+        $fields = [];
+        foreach (is_array($archive['fields'] ?? null) ? $archive['fields'] : [] as $k => $v) {
+            $fields[(string)$k] = is_string($v) && preg_match('/^\{([A-Za-z_][A-Za-z0-9_]*)\}$/', $v, $m) === 1 ? ($doc['data'][$m[1]] ?? null) : $v;
+        }
+        return $attachments->storeGenerated((string)$archive['upload'], $doc['pdf'], $doc['filename'], $fields, $authContext);
     }
 
     /**

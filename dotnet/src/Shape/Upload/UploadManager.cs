@@ -61,7 +61,25 @@ public sealed class UploadManager
         // sets no explicit MaxSize.
         var maxBytes = entry.MaxSize > 0 ? entry.MaxSize : DefaultMaxUploadBytes;
         var bytes = await ReadAllBytesAsync(file, maxBytes);
-        var detectedMime = ValidateFile(file, bytes, entry);
+        return Store(entry, bytes, file.FileName, file.ContentType);
+    }
+
+    /// <summary>
+    /// Store generated content (e.g. a rendered PDF) exactly as if it had been uploaded: the same role gate, size and
+    /// mime rules, key generation and sha256. Used by the document archive.
+    /// </summary>
+    public Dictionary<string, object?> StoreBytes(
+        string name, byte[] bytes, string filename, Dictionary<string, object?> authContext)
+    {
+        var entry = Entry(name)
+            ?? throw new ApiException("NOT_FOUND", $"Upload endpoint '{name}' is not configured.", 404);
+        AuthorizeRole(entry, authContext);
+        return Store(entry, bytes, filename, "");
+    }
+
+    private static Dictionary<string, object?> Store(UploadEntry entry, byte[] bytes, string filename, string clientContentType)
+    {
+        var detectedMime = ValidateFile(clientContentType, bytes, entry);
 
         // SECURITY-REVIEW M6: the stored extension is derived from the detected
         // MIME, not the client filename — a PNG-content file named "x.html"
@@ -74,7 +92,7 @@ public sealed class UploadManager
         return new Dictionary<string, object?>
         {
             ["id"] = key,
-            ["filename"] = file.FileName,
+            ["filename"] = filename,
             ["size"] = bytes.LongLength,
             ["mime_type"] = detectedMime,
             ["sha256"] = sha256,
@@ -185,7 +203,7 @@ public sealed class UploadManager
         return ms.ToArray();
     }
 
-    private static string ValidateFile(IFormFile file, byte[] bytes, UploadEntry entry)
+    private static string ValidateFile(string clientContentType, byte[] bytes, UploadEntry entry)
     {
         if (bytes.Length == 0)
             throw new ApiException("UPLOAD_VALIDATION_ERROR", "Uploaded file is empty.", 400);
@@ -214,7 +232,7 @@ public sealed class UploadManager
         // client-supplied Content-Type would let "text" labelled application/pdf through
         // (the PHP side uses finfo and never trusts the header).
         var sniffed = SniffMimeType(bytes);
-        var detected = restricted ? sniffed ?? "application/octet-stream" : DetectMimeType(bytes, file.ContentType);
+        var detected = restricted ? sniffed ?? "application/octet-stream" : DetectMimeType(bytes, clientContentType);
 
         if (restricted && !allowed!.Contains(detected))
         {

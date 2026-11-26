@@ -5,6 +5,7 @@ using Shape;
 using Shape.Attributes;
 using Shape.Auth;
 using Shape.Core;
+using Shape.Pdf;
 using Shape.Upload;
 using Xunit;
 
@@ -45,6 +46,7 @@ public sealed class AttachmentTests : IDisposable
     private readonly string _dbFile = Path.Combine(Path.GetTempPath(), $"shape-att-{Guid.NewGuid():N}.db");
     private readonly Database _db;
     private readonly AttachmentService _svc;
+    private readonly DocumentService _docs;
 
     private static readonly byte[] Pdf = Encoding.ASCII.GetBytes("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
 
@@ -86,6 +88,24 @@ public sealed class AttachmentTests : IDisposable
             }
         });
         _svc = new AttachmentService(uploads, executor);
+        _docs = new DocumentService(executor, new()
+        {
+            ["case_sheet"] = new()
+            {
+                ["mask"] = "cases.get", ["params"] = new List<object?> { "id" }, ["filename"] = "case-{id}.pdf",
+                ["blocks"] = new List<object?> { new Dictionary<string, object?> { ["type"] = "heading", ["text"] = "Case {title}" } },
+                ["archive"] = new Dictionary<string, object?>
+                {
+                    ["upload"] = "case_files",
+                    ["fields"] = new Dictionary<string, object?> { ["case_id"] = "{id}" }
+                }
+            },
+            ["plain_sheet"] = new()
+            {
+                ["mask"] = "cases.get", ["params"] = new List<object?> { "id" },
+                ["blocks"] = new List<object?> { new Dictionary<string, object?> { ["type"] = "heading", ["text"] = "x" } }
+            }
+        });
     }
 
     public void Dispose()
@@ -197,5 +217,44 @@ public sealed class AttachmentTests : IDisposable
         var plain = new AttachmentService(new UploadManager(new() { ["covers"] = new UploadEntry { Storage = new() { Path = _dir } } }),
             new BatchExecutor(_db, new MaskRegistry(new()), new ValidatorRegistry()));
         Assert.False(plain.IsAttachmentEntry("covers"));
+    }
+
+    [Fact]
+    public async Task Archive_stores_the_generated_pdf_as_attachment()
+    {
+        var q = new Dictionary<string, string?> { ["id"] = "1" };
+        var a = await _docs.ArchiveAsync("case_sheet", q, Ctx("user", 1), _svc, "20261126120000Z");
+        Assert.Equal("case-1.pdf", a["filename"]);
+        Assert.Equal("application/pdf", a["mime_type"]);
+        Assert.Equal(1L, Convert.ToInt64(a["case_id"]));
+        Assert.Equal(1, StoredCount());
+
+        var id = Convert.ToInt64(a["id"]);
+        var opened = _svc.Open("case_files", id, Ctx("user", 1));
+        using var ms = new MemoryStream();
+        await using (var st = opened.Stream) await st.CopyToAsync(ms);
+        var bytes = ms.ToArray();
+        Assert.Equal("%PDF-1.4", Encoding.ASCII.GetString(bytes, 0, 8));
+        Assert.Equal(Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant(), a["sha256"]);
+        Assert.Equal((long)bytes.Length, Convert.ToInt64(a["size"]));
+
+        // the archived copy follows the case's scope
+        Assert.Equal("NOT_FOUND", Code(() => _svc.Open("case_files", id, Ctx("user", 2))));
+
+        // every call stores a NEW copy
+        var a2 = await _docs.ArchiveAsync("case_sheet", q, Ctx("user", 1), _svc, "20261126130000Z");
+        Assert.NotEqual(a["id"], a2["id"]);
+        Assert.Equal(2, StoredCount());
+    }
+
+    [Fact]
+    public async Task Archive_refuses_what_the_caller_cannot_see_and_stores_nothing()
+    {
+        var q = new Dictionary<string, string?> { ["id"] = "2" };   // someone else's case
+        Assert.Equal("NOT_FOUND", await CodeAsync(() => _docs.ArchiveAsync("case_sheet", q, Ctx("user", 1), _svc)));
+        Assert.Equal("NOT_FOUND", await CodeAsync(() => _docs.ArchiveAsync("plain_sheet", new Dictionary<string, string?> { ["id"] = "1" }, Ctx("user", 1), _svc)));
+        Assert.Equal("NOT_FOUND", await CodeAsync(() => _docs.ArchiveAsync("nope", q, Ctx("user", 1), _svc)));
+        Assert.NotEqual("(none)", await CodeAsync(() => _docs.ArchiveAsync("case_sheet", new Dictionary<string, string?> { ["id"] = "1" }, new(), _svc)));
+        Assert.Equal(0, StoredCount());
     }
 }

@@ -1113,7 +1113,30 @@ curl -H "Authorization: Bearer $TOKEN" "https://api.example.com/pdf/invoice?id=4
 
 **Fonts and size:** `DejaVuSans-Subset.ttf` / `DejaVuSans-Bold-Subset.ttf` (Latin, Latin-1, Latin Extended-A, common punctuation, `€`, `™`, `−`; ~23 kB each, DejaVu license in `resources/fonts/LICENSE_DEJAVU`). A one-page invoice is ~30 kB. Characters outside the subset print as `?`. To use another TrueType font, pass your own `TrueTypeFont` instances to `DocumentRenderer`.
 
-**What it is not (yet):** no images or logos, no HTML/CSS, no right-to-left or complex scripts, no kerning, one font family (regular + bold). **Immutable invoices:** generate once and keep the bytes — store the result as an attachment (see *Private attachments*, with its `sha256`) and serve that file afterwards, so a later print can never differ from what was issued.
+**What it is not (yet):** no images or logos, no HTML/CSS, no right-to-left or complex scripts, no kerning, one font family (regular + bold).
+
+### Archiving: immutable copies
+
+An issued invoice must never change when the data does. Add an `archive` block and the document can also be **generated and stored as a private attachment** in one call:
+
+```php
+'documents' => ['invoice' => [
+    'mask' => 'invoices.get', 'params' => ['id'], 'filename' => 'faktura-{number}.pdf',
+    'blocks' => [/* … */],
+    'archive' => [
+        'upload' => 'invoice_files',                 // an `uploads` entry with an `attachments` block
+        'fields' => ['invoice_id' => '{id}'],        // attachment fields; {placeholders} come from the header row
+    ],
+]],
+```
+
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" "https://api.example.com/api.php/pdf/invoice?id=42"   # PHP
+curl -X POST -H "Authorization: Bearer $TOKEN" "https://api.example.com/pdf/invoice?id=42"           # .NET
+# → {"id": 17, "filename": "faktura-2026_001.pdf", "size": 30412, "mime_type": "application/pdf", "sha256": "…", "invoice_id": 42}
+```
+
+The copy is then served by `GET /files/invoice_files/17` like any attachment, with the attachment table's scopes deciding who may read it. Authorisation is the **intersection** of both features: the caller must be able to read the document's data (otherwise `NOT_FOUND`, nothing is stored) and must pass the upload entry's role gate and parent check. Size and mime rules of the upload entry apply (use `'mime_types' => ['application/pdf']`). Every call stores a **new** copy; to allow only one, put a `UNIQUE` index on the attachment table's parent column — a second archive then fails in the database and its file is removed, so nothing is orphaned. A document without `archive` answers `NOT_FOUND` to `POST`. The row is written through the normal mutation path, so audit (Tier 1/2) records who archived what and when.
 
 ## Audit columns by convention
 
