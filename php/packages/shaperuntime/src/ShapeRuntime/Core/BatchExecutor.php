@@ -26,6 +26,9 @@ final class BatchExecutor
     /** @var (callable(string,string,?string,array<string, mixed>,list<string>,?array<string, mixed>,?array<string, mixed>):void)|null */
     private $auditLogger = null;
 
+    /** @var (callable(list<array{table:string,action:string,affected:int}>):void)|null */
+    private $changeListener = null;
+
     /** @var array{tables:?list<string>, exclude:list<string>}|null Audit Tier 2 (before/after values). */
     private ?array $auditDiff = null;
 
@@ -65,6 +68,40 @@ final class BatchExecutor
     public function setAuditLogger(callable $cb): void
     {
         $this->auditLogger = $cb;
+    }
+
+    /**
+     * Called once per mutation batch AFTER it succeeded (after the commit when transactional) with the list of
+     * `{table, action, affected}` that actually changed rows. Used for event notifications; an exception thrown by
+     * the listener never fails the mutation.
+     *
+     * @param callable(list<array{table:string,action:string,affected:int}>):void $cb
+     */
+    public function setChangeListener(callable $cb): void
+    {
+        $this->changeListener = $cb;
+    }
+
+    /** @param list<array<string, mixed>> $results */
+    private function fireChanges(array $results): void
+    {
+        if ($this->changeListener === null) {
+            return;
+        }
+        $changes = [];
+        foreach ($results as $r) {
+            if ((int)($r['affected'] ?? 0) > 0 && isset($r['table'], $r['action'])) {
+                $changes[] = ['table' => (string)$r['table'], 'action' => (string)$r['action'], 'affected' => (int)$r['affected']];
+            }
+        }
+        if ($changes === []) {
+            return;
+        }
+        try {
+            ($this->changeListener)($changes);
+        } catch (Throwable) {
+            // a notification problem must never turn a committed mutation into an error
+        }
     }
 
     /**
@@ -208,6 +245,7 @@ final class BatchExecutor
             }
 
             $this->database->commit();
+            $this->fireChanges($results);
             return ['results' => $results];
         } catch (Throwable $e) {
             if ($this->database->isInTransaction()) {
@@ -232,6 +270,7 @@ final class BatchExecutor
             $results[] = $result;
         }
 
+        $this->fireChanges($results);
         return ['results' => $results];
     }
 

@@ -34,6 +34,7 @@ public sealed class OpDispatcher
 
     private readonly string? _auditLogTable;
     private readonly AuditDiffConfig? _auditDiff;
+    private readonly Shape.Notify.NotificationsHook? _notifications;
 
     public OpDispatcher(
         DatabaseConfig dbConfig,
@@ -43,7 +44,8 @@ public sealed class OpDispatcher
         Dictionary<string, Func<Dictionary<string, object?>, CommandContext, Dictionary<string, object?>>>? commands,
         string? auditLogTable = null,
         Dictionary<string, List<string>>? commandRoles = null,
-        AuditDiffConfig? auditDiff = null)
+        AuditDiffConfig? auditDiff = null,
+        NotificationsConfig? notifications = null)
     {
         _dbConfig = dbConfig;
         _authConfig = authConfig;
@@ -57,6 +59,7 @@ public sealed class OpDispatcher
         _guardNoDb = BuildGuard(database: null);
         _auditLogTable = auditLogTable;
         _auditDiff = auditDiff;
+        _notifications = notifications is { HasEventRules: true } ? new Shape.Notify.NotificationsHook(notifications, dbConfig, authConfig) : null;
     }
 
     /// <summary>
@@ -74,6 +77,7 @@ public sealed class OpDispatcher
             if (_auditDiff != null)
                 executor.SetAuditDiff(_auditDiff.Tables, _auditDiff.Exclude, logger.LogWithValues, logger.AssertValueColumns);
         }
+        _notifications?.Attach(executor, database);
         return executor;
     }
 

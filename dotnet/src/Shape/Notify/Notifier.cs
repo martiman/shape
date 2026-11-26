@@ -84,6 +84,42 @@ public sealed class Notifier
         return new EnqueueSummary(queued, skipped, rules);
     }
 
+    /// <summary>
+    /// Event trigger: evaluate the rules whose <c>On</c> matches a committed change, then (unless a rule says
+    /// <c>Send = "later"</c>) deliver the queue right away. Never throws: the mutation has already been committed
+    /// and a failed mail simply stays pending for the next cron run.
+    /// </summary>
+    public (int Queued, int Sent) OnChanges(IReadOnlyList<BatchExecutor.Change> changes)
+    {
+        int queued = 0, sent = 0;
+        var sendNow = false;
+        foreach (var (name, rule) in _cfg.Rules)
+        {
+            if (!Matches(rule, changes)) continue;
+            var s = Enqueue(name);
+            queued += s.Queued;
+            sendNow |= s.Queued > 0 && !string.Equals(rule.Send, "later", StringComparison.OrdinalIgnoreCase);
+        }
+        if (sendNow)
+        {
+            try { sent = Deliver().Sent; }
+            catch { /* stays pending */ }
+        }
+        return (queued, sent);
+    }
+
+    private static bool Matches(NotificationRule rule, IReadOnlyList<BatchExecutor.Change> changes)
+    {
+        if (rule.On == null) return false;
+        foreach (var c in changes)
+        {
+            if ((rule.On.Tables.Count == 0 || rule.On.Tables.Contains(c.Table))
+                && (rule.On.Actions.Count == 0 || rule.On.Actions.Contains(c.Action)))
+                return true;
+        }
+        return false;
+    }
+
     public DeliverSummary Deliver(bool dryRun = false, int limit = 100)
     {
         int sent = 0, failed = 0, retry = 0;
@@ -299,6 +335,7 @@ public sealed class Notifier
 
     private bool RecentlySent(string rule, string to, string key, int repeatDays)
     {
+        if (repeatDays <= 0) return false;   // RepeatDays = 0: no de-duplication (every event mails)
         var t = _db.QuoteIdentifier(Outbox());
         var since = DateTimeOffset.FromUnixTimeSeconds(_clock() - Math.Max(0, repeatDays) * 86400L).UtcDateTime
             .ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);

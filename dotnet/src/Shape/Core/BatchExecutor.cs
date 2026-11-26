@@ -69,6 +69,32 @@ public sealed class BatchExecutor
 
     public void SetAuditLogger(AuditLogger cb) => _auditLogger = cb;
 
+    /// <summary>One committed change: table, action and affected row count.</summary>
+    public sealed record Change(string Table, string Action, int Affected);
+
+    private Action<IReadOnlyList<Change>>? _changeListener;
+
+    /// <summary>
+    /// Called once per mutation batch AFTER it succeeded (after the commit when transactional) with the changes that
+    /// actually touched rows. Used for event notifications; an exception thrown by the listener never fails the mutation.
+    /// </summary>
+    public void SetChangeListener(Action<IReadOnlyList<Change>> listener) => _changeListener = listener;
+
+    private void FireChanges(List<Dictionary<string, object?>> results)
+    {
+        if (_changeListener == null) return;
+        var changes = new List<Change>();
+        foreach (var r in results)
+        {
+            var affected = r.TryGetValue("affected", out var a) && a != null ? Convert.ToInt32(a) : 0;
+            if (affected > 0 && r.TryGetValue("table", out var t) && r.TryGetValue("action", out var ac))
+                changes.Add(new Change(Convert.ToString(t) ?? "", Convert.ToString(ac) ?? "", affected));
+        }
+        if (changes.Count == 0) return;
+        try { _changeListener(changes); }
+        catch { /* a notification problem must never turn a committed mutation into an error */ }
+    }
+
     /// <summary>
     /// Audit Tier 2: capture before/after VALUES for the given tables (<c>null</c> = all). Update/delete
     /// snapshot the matched rows (same WHERE incl. scope/tenant guards) before the mutation and log one
@@ -166,6 +192,7 @@ public sealed class BatchExecutor
                 results.Add(ExecuteSingleMutation(mutation, authContext, seenRefs));
 
             _database.Commit();
+            FireChanges(results);
             return new Dictionary<string, object?> { ["results"] = results };
         }
         catch
@@ -185,6 +212,7 @@ public sealed class BatchExecutor
         foreach (var mutation in mutations)
             results.Add(ExecuteSingleMutation(mutation, authContext, seenRefs));
 
+        FireChanges(results);
         return new Dictionary<string, object?> { ["results"] = results };
     }
 

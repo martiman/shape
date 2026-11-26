@@ -1055,7 +1055,36 @@ Options: `--rule=NAME`, `--dry-run` (show what would be queued/sent, write nothi
 
 **Transports.** `smtp` is a small built-in client (implicit TLS `ssl`, STARTTLS `tls`, or `none`; AUTH PLAIN/LOGIN) with no dependencies — fine for tens of mails per run. `mail` (PHP only) uses `mail()`, which most shared hostings route to their own sendmail. `log` writes "to + subject" only. For anything bigger implement `MailerInterface` / `IMailer` (PHPMailer, MailKit, a mail API) and pass it to `NotifyCommand::run(..., $mailer)` / `NotifyRunner.Run(..., mailer)`.
 
-**What it is not (yet):** no per-event instant mails (a cron run is the trigger; for "ticket assigned" write the outbox row from an after-hook), no unsubscribe link beyond `optout_column`, no reply handling, and no templates beyond the table layout.
+### Instant mails on events
+
+A rule with an `on` block is **also evaluated right after a committed mutation** of that table — "ticket assigned", "invoice approved", "contract created" — and mailed immediately, with no cron wait:
+
+```php
+'ticket_assigned' => [
+    'on'          => ['table' => 'tickets', 'actions' => ['insert', 'update']],   // `table` may be a list; no `actions` = any
+    'mask'        => 'tickets.myOpen',             // the mask decides what is relevant: "my open tickets"
+    'to'          => ['users' => ['roles' => ['user'], 'optout_column' => 'notify_email']],
+    'key'         => 'id',
+    'repeat_days' => 7,
+    'subject'     => 'Your open tickets: {count}',
+],
+```
+
+```csharp
+["ticket_assigned"] = new NotificationRule {
+    On = new() { Tables = { "tickets" }, Actions = { "insert", "update" } },
+    Mask = "tickets.myOpen", To = new() { Users = new() { Roles = { "user" } } }, Subject = "Your open tickets: {count}" }
+```
+
+There is no row-diffing to configure: the event only says "something changed, look again", and the rule's mask answers "what should this person know now". Because the de-duplication fingerprint is the *set of item keys*, a person is mailed when **their list changed** — a newly assigned ticket produces a mail to its assignee only, an edit of an unrelated ticket produces nothing. Everything else is the same as the cron flavour: each recipient gets only rows they could open, opt-out and inactive users are skipped, the outbox keeps the history.
+
+- **Timing.** The mutation is committed first; the rules run and mail is sent after it, in the same request. `'send' => 'later'` (`Send = "later"`) only queues and leaves delivery to the next cron run — use it for slow SMTP or bulk-ish rules.
+- **Failures never reach the caller.** A bad mask, a rejected recipient or an SMTP outage never fails or rolls back the mutation; the mail stays `pending` and the cron run retries it (up to `max_attempts`).
+- **Every change mails: `repeat_days => 0`.** With the default 7 days, a second change that leaves the same item list produces no second mail. `repeat_days => 0` turns de-duplication off, or make `key` a column that changes with the event (`updated_at`).
+- **Cron still catches up.** The scheduled run evaluates event rules too, so a mail lost to a crash between commit and send is not lost for good.
+- **Scope.** Triggered by mutations that go through Shape (JSON API, uploads, archive); changes made behind its back do not fire anything — the cron run covers those.
+
+**What it is not (yet):** no per-field conditions ("only when `status` changed to `done`" — express it in the mask), no unsubscribe link beyond `optout_column`, no reply handling, and no templates beyond the table layout.
 
 ## PDF documents
 

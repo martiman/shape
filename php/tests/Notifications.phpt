@@ -171,5 +171,64 @@ Assert::match('#Subject: =\?UTF-8\?B\?#', $log);
 Assert::contains('multipart/alternative', $log);
 @unlink($captured);
 
+// ── event rules: evaluated right after a committed mutation, mailed immediately ─────────────────────
+$evMasks = $masks + ['contracts' => ['sql' => 'SELECT id, owner_id, title, end_date FROM contracts', 'params' => [], 'roles' => ['admin', 'user'], 'writable' => true, 'description' => 'x']];
+$evExec = new BatchExecutor($db, new MaskRegistry($evMasks), new ValidatorRegistry([]));
+$evExec->setScoping([], $scopes);
+$evMailer = new CollectingMailer();
+$evCfg = ['max_attempts' => 3, 'rules' => [
+    'new_contract' => [
+        'on' => ['table' => 'contracts', 'actions' => ['insert']],
+        'mask' => 'contracts.expiring', 'params' => ['until' => '2027-12-31'],
+        'to' => ['users' => ['roles' => ['user'], 'optout_column' => 'notify_email']],
+        'subject' => 'Contracts: {count}', 'repeat_days' => 0,
+    ],
+    'later_rule' => [
+        'on' => ['table' => ['contracts'], 'actions' => ['delete']], 'send' => 'later',
+        'mask' => 'contracts.expiring', 'params' => ['until' => '2027-12-31'],
+        'to' => ['emails' => ['legal@x.cz'], 'run_as' => ['role' => 'admin']],
+    ],
+]];
+Assert::true(Notifier::hasEventRules($evCfg));
+Assert::false(Notifier::hasEventRules(['rules' => ['a' => ['mask' => 'x']]]));
+$evNotifier = new Notifier($db, $evExec, $login, $evMailer, $evCfg, ['table' => 'users'], $clock);
+$evExec->setChangeListener(static fn(array $c) => $evNotifier->onChanges($c));
+$admin = ['id' => 3, 'role' => 'admin', 'owner_id' => null];
+$ob0 = count($outbox());
+
+// an update does not match `actions: [insert]` -> nothing queued
+$evExec->executeMutations([['ref' => 'u', 'table' => 'contracts', 'action' => 'update', 'filter' => ['id' => 1], 'data' => ['title' => 'A-lease2']]], $admin, true);
+Assert::same($ob0, count($outbox()));
+Assert::count(0, $evMailer->sent);
+
+// an insert queues AND sends right away, to each user who may see rows (alice, bob), none to opted-out / inactive users
+$evExec->executeMutations([['ref' => 'i', 'table' => 'contracts', 'action' => 'insert', 'data' => ['owner_id' => 1, 'title' => 'E-event', 'end_date' => '2026-12-30']]], $admin, true);
+Assert::same(['alice@x.cz', 'bob@x.cz'], array_column($evMailer->sent, 'to'));
+$evRows = array_values(array_filter($outbox(), static fn(array $r): bool => $r['rule'] === 'new_contract'));
+Assert::same(['sent', 'sent'], array_column($evRows, 'status'));
+Assert::contains('E-event', $evRows[count($evRows) - 2]['text']);
+
+// repeat_days = 0: the same list is mailed again for the next event
+$evExec->executeMutations([['ref' => 'i2', 'table' => 'contracts', 'action' => 'insert', 'data' => ['owner_id' => 1, 'title' => 'F-event', 'end_date' => '2026-12-31']]], $admin, false);
+Assert::count(4, $evMailer->sent);
+
+// 'send' => 'later' queues but leaves the mail pending for cron
+$evExec->executeMutations([['ref' => 'd', 'table' => 'contracts', 'action' => 'delete', 'filter' => ['title' => 'F-event']]], $admin, true);
+$later = array_values(array_filter($outbox(), static fn(array $r): bool => $r['rule'] === 'later_rule'));
+Assert::same(['pending'], array_column($later, 'status'));
+Assert::count(4, $evMailer->sent);
+
+// a failing rule / transport never fails the mutation
+$boom = new Notifier($db, $evExec, $login, new class implements \Shape\Notify\MailerInterface {
+    public function send(string $to, string $subject, string $text, ?string $html = null): void
+    {
+        throw new \RuntimeException('smtp down');
+    }
+}, $evCfg, ['table' => 'users'], $clock);
+$evExec->setChangeListener(static fn(array $c) => $boom->onChanges($c));
+$r = $evExec->executeMutations([['ref' => 'i3', 'table' => 'contracts', 'action' => 'insert', 'data' => ['owner_id' => 2, 'title' => 'G-event', 'end_date' => '2026-12-31']]], $admin, true);
+Assert::same(1, $r['results'][0]['affected']);
+Assert::true(in_array('pending', array_column($outbox(), 'status'), true));   // failed mails wait for a retry
+
 @unlink($tmp);
 echo "OK\n";

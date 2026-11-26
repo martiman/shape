@@ -904,6 +904,23 @@ final class ShapeRouter
                 );
             }
         }
+
+        // Event notifications: rules with an `on` block run right after a committed mutation (see DB-FIRST.md).
+        $notify = is_array($config['notifications'] ?? null) ? $config['notifications'] : null;
+        if ($notify !== null && \Shape\Notify\Notifier::hasEventRules($notify)) {
+            $executor->setChangeListener(static function (array $changes) use ($config, $database, $executor, $notify): void {
+                $auth = is_array($config['auth'] ?? null) ? $config['auth'] : [];
+                $mailer = \Shape\Notify\NotifyCommand::mailerFromConfig(is_array($notify['transport'] ?? null) ? $notify['transport'] : ['driver' => 'log']);
+                (new \Shape\Notify\Notifier(
+                    $database,
+                    $executor,
+                    new \ShapeRuntime\Auth\LoginService($config['db'] ?? [], $auth, new \ShapeRuntime\Auth\JwtIssuer($auth)),
+                    $mailer,
+                    $notify,
+                    ['table' => $auth['users_table'] ?? 'users']
+                ))->onChanges($changes);
+            });
+        }
         return $executor;
     }
 

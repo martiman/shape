@@ -190,6 +190,9 @@ public sealed class NotificationsConfig
     public string OutboxTable { get; set; } = "notification_outbox";
     public int MaxAttempts { get; set; } = 3;
     public Dictionary<string, NotificationRule> Rules { get; set; } = new(StringComparer.Ordinal);
+
+    /// <summary>Whether any rule reacts to events (so a change listener is wired).</summary>
+    public bool HasEventRules => Rules.Values.Any(r => r.On != null);
 }
 
 public sealed class NotificationTransport
@@ -222,6 +225,20 @@ public sealed class NotificationRule
     public string Outro { get; set; } = "";
     public List<string>? Columns { get; set; }
     public Dictionary<string, string>? Labels { get; set; }
+    /// <summary>
+    /// Event trigger: when set, the rule is also evaluated right after a committed mutation of these tables/actions
+    /// (see <c>Notifier.OnChanges</c>); the cron run still catches up.
+    /// </summary>
+    public NotificationTrigger? On { get; set; }
+    /// <summary><c>now</c> (default): deliver right after the event; <c>later</c>: leave it pending for the next cron run.</summary>
+    public string Send { get; set; } = "now";
+}
+
+/// <summary>Which committed changes trigger a rule. Empty <see cref="Actions"/> = any of insert/update/delete.</summary>
+public sealed class NotificationTrigger
+{
+    public List<string> Tables { get; set; } = new();
+    public List<string> Actions { get; set; } = new();
 }
 
 /// <summary>

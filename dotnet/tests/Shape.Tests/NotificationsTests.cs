@@ -15,6 +15,7 @@ public sealed class NotificationsTests : IDisposable
     private readonly Database _db;
     private readonly BatchExecutor _executor;
     private readonly LoginService _login;
+    private readonly Dictionary<string, MaskConfig> _masks;
     private long _now = 1_800_000_000;
 
     private static readonly Dictionary<string, ScopeConfig> Scopes = new(StringComparer.Ordinal)
@@ -40,7 +41,7 @@ public sealed class NotificationsTests : IDisposable
         _db.Exec("INSERT INTO contracts (owner_id, title, end_date) VALUES (1, 'A-lease', '2026-12-01'), (1, 'A-<b>support</b>', '2026-12-10'), (2, 'B-license', '2026-12-05'), (4, 'C-old', '2026-12-02'), (6, 'D-one', '2026-12-03')", new());
 
         const string baseSql = "SELECT c.id, c.title, c.end_date, u.email AS owner_email FROM contracts c JOIN users u ON u.id = c.owner_id WHERE c.end_date <= @until";
-        var masks = new Dictionary<string, MaskConfig>
+        var masks = _masks = new Dictionary<string, MaskConfig>
         {
             ["contracts.expiring"] = new()
             {
@@ -116,6 +117,78 @@ public sealed class NotificationsTests : IDisposable
         Assert.Equal(2, n.Enqueue(null, dryRun: true).Queued);   // dry run reports what WOULD be queued ...
         Assert.Equal(before, Outbox().Count);                    // ... and writes nothing
         Assert.Equal(2, n.Enqueue().Queued);                     // 7+ days later both lists repeat
+    }
+
+    [Fact]
+    public void Event_rules_run_right_after_a_committed_mutation_and_mail_immediately()
+    {
+        var masks = new Dictionary<string, MaskConfig>(_masks)
+        {
+            ["contracts"] = new() { Sql = "SELECT id, owner_id, title, end_date FROM contracts", Roles = new() { "admin", "user" }, Writable = true, Description = "x" }
+        };
+        var exec = new BatchExecutor(_db, new MaskRegistry(masks), new ValidatorRegistry(), null, Scopes);
+        var mailer = new CollectingMailer();
+        var cfg = new NotificationsConfig
+        {
+            MaxAttempts = 3,
+            Rules =
+            {
+                ["new_contract"] = new()
+                {
+                    On = new() { Tables = { "contracts" }, Actions = { "insert" } },
+                    Mask = "contracts.expiring", Params = new() { ["until"] = "2027-12-31" },
+                    To = new() { Users = new() { Roles = { "user" }, OptoutColumn = "notify_email" } },
+                    Subject = "Contracts: {count}", RepeatDays = 0
+                },
+                ["later_rule"] = new()
+                {
+                    On = new() { Tables = { "contracts" }, Actions = { "delete" } }, Send = "later",
+                    Mask = "contracts.expiring", Params = new() { ["until"] = "2027-12-31" },
+                    To = new() { Emails = new() { "legal@x.cz" }, RunAs = new() { ["role"] = "admin" } }
+                }
+            }
+        };
+        Assert.True(cfg.HasEventRules);
+        Assert.False(new NotificationsConfig { Rules = { ["a"] = new() { Mask = "x" } } }.HasEventRules);
+        var notifier = new Notifier(_db, exec, _login, mailer, cfg, "users", () => _now);
+        exec.SetChangeListener(c => notifier.OnChanges(c));
+        var admin = new Dictionary<string, object?> { ["id"] = 3, ["role"] = "admin", ["owner_id"] = null };
+        var before = Outbox().Count;
+
+        // update does not match Actions = insert
+        exec.ExecuteMutations(new() { new() { ["ref"] = "u", ["table"] = "contracts", ["action"] = "update",
+            ["filter"] = new Dictionary<string, object?> { ["id"] = 1 }, ["data"] = new Dictionary<string, object?> { ["title"] = "A-lease2" } } }, admin, true);
+        Assert.Equal(before, Outbox().Count);
+        Assert.Empty(mailer.Sent);
+
+        // insert: queued AND sent immediately to each user who may see rows (alice, bob), not to opted-out / inactive users
+        exec.ExecuteMutations(new() { new() { ["ref"] = "i", ["table"] = "contracts", ["action"] = "insert",
+            ["data"] = new Dictionary<string, object?> { ["owner_id"] = 1, ["title"] = "E-event", ["end_date"] = "2026-12-30" } } }, admin, true);
+        Assert.Equal(new[] { "alice@x.cz", "bob@x.cz" }, mailer.Sent.Select(m => m.To).ToArray());
+        var ev = Outbox().Where(o => o.Rule == "new_contract").ToList();
+        Assert.All(ev, o => Assert.Equal("sent", o.Status));
+        Assert.Contains("E-event", ev[^2].Text);
+
+        // RepeatDays = 0: the same list is mailed again for the next event (non-transactional batch too)
+        exec.ExecuteMutations(new() { new() { ["ref"] = "i2", ["table"] = "contracts", ["action"] = "insert",
+            ["data"] = new Dictionary<string, object?> { ["owner_id"] = 1, ["title"] = "F-event", ["end_date"] = "2026-12-31" } } }, admin, false);
+        Assert.Equal(4, mailer.Sent.Count);
+
+        // Send = "later": queued but left pending for cron
+        exec.ExecuteMutations(new() { new() { ["ref"] = "d", ["table"] = "contracts", ["action"] = "delete",
+            ["filter"] = new Dictionary<string, object?> { ["title"] = "F-event" } } }, admin, true);
+        Assert.Equal(new[] { "pending" }, Outbox().Where(o => o.Rule == "later_rule").Select(o => o.Status).ToArray());
+        Assert.Equal(4, mailer.Sent.Count);
+
+        // a failing transport never fails the mutation; the mail waits for a retry
+        var boom = new CollectingMailer();
+        boom.FailFor.Add("alice@x.cz"); boom.FailFor.Add("bob@x.cz");
+        var failing = new Notifier(_db, exec, _login, boom, cfg, "users", () => _now);
+        exec.SetChangeListener(c => failing.OnChanges(c));
+        var res = exec.ExecuteMutations(new() { new() { ["ref"] = "i3", ["table"] = "contracts", ["action"] = "insert",
+            ["data"] = new Dictionary<string, object?> { ["owner_id"] = 2, ["title"] = "G-event", ["end_date"] = "2026-12-31" } } }, admin, true);
+        Assert.Equal(1, Convert.ToInt32(((List<Dictionary<string, object?>>)res["results"]!)[0]["affected"]));
+        Assert.Contains(Outbox(), o => o.Status == "pending" && o.Rule == "new_contract");
     }
 
     [Fact]

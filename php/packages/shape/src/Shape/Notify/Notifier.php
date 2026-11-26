@@ -36,6 +36,10 @@ use ShapeRuntime\Core\Database;
  *       'columns'     => ['title', 'end_date'],
  *       'labels'      => ['title' => 'Contract', 'end_date' => 'Ends'],
  *   ]
+ *
+ * Event rules: add `'on' => ['table' => 'tickets', 'actions' => ['insert', 'update']]` (`actions` optional, `table`
+ * may be a list) and the rule is also evaluated right after a successful mutation of that table, see
+ * {@see onChanges()}. `'send' => 'later'` leaves delivery to the next cron run (default: send immediately).
  */
 final class Notifier
 {
@@ -100,6 +104,68 @@ final class Notifier
             $summary['skipped'] += $r['skipped'];
         }
         return $summary;
+    }
+
+    /**
+     * Event trigger: evaluate the rules whose `on` matches a committed change, then (unless a rule says
+     * `'send' => 'later'`) deliver the queue right away. Never throws: the mutation that caused it has already been
+     * committed, and a failed mail simply stays pending for the next cron run.
+     *
+     * @param list<array{table:string,action:string,affected:int}> $changes
+     * @return array{queued:int, sent:int}
+     */
+    public function onChanges(array $changes): array
+    {
+        $out = ['queued' => 0, 'sent' => 0];
+        $rules = is_array($this->config['rules'] ?? null) ? $this->config['rules'] : [];
+        $sendNow = false;
+        foreach ($rules as $name => $rule) {
+            if (!is_array($rule) || !self::matches($rule, $changes)) {
+                continue;
+            }
+            $s = $this->enqueue((string)$name);
+            $out['queued'] += $s['queued'];
+            $sendNow = $sendNow || ($s['queued'] > 0 && ($rule['send'] ?? 'now') !== 'later');
+        }
+        if ($sendNow) {
+            try {
+                $out['sent'] = $this->deliver()['sent'];
+            } catch (\Throwable) {
+                // stays pending
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * @param array<string, mixed> $rule
+     * @param list<array{table:string,action:string,affected:int}> $changes
+     */
+    private static function matches(array $rule, array $changes): bool
+    {
+        $on = $rule['on'] ?? null;
+        if (!is_array($on)) {
+            return false;
+        }
+        $tables = array_values(array_map('strval', (array)($on['table'] ?? [])));
+        $actions = array_values(array_map('strval', (array)($on['actions'] ?? [])));
+        foreach ($changes as $c) {
+            if (($tables === [] || in_array($c['table'], $tables, true)) && ($actions === [] || in_array($c['action'], $actions, true))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Whether any rule reacts to events (so the router knows to wire a listener). */
+    public static function hasEventRules(array $config): bool
+    {
+        foreach (is_array($config['rules'] ?? null) ? $config['rules'] : [] as $rule) {
+            if (is_array($rule) && is_array($rule['on'] ?? null)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -357,6 +423,9 @@ final class Notifier
 
     private function recentlySent(string $rule, string $to, string $key, int $repeatDays): bool
     {
+        if ($repeatDays <= 0) {
+            return false;   // repeat_days = 0: no de-duplication (every event mails)
+        }
         $t = $this->db->quoteIdentifier($this->outbox());
         $since = gmdate('Y-m-d H:i:s', $this->time() - max(0, $repeatDays) * 86400);
         $r = $this->db->run(
