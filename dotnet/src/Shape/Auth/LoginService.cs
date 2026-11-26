@@ -226,7 +226,7 @@ public sealed class LoginService
     }
 
     /// <summary>
-    /// <c>auth.exchange</c> (brownfield adapter guide §3): swap an
+    /// <c>auth.exchange</c> (TISCLOUD-SHAPE-EXTRACTION-PLAN §3): swap an
     /// app-validated external token for a Shape-issued JWT, RFC 8693 style.
     /// Exchange-once by design — the app's <see cref="ITokenExchangeSource"/>
     /// verifies the foreign token a single time; afterwards the caller is an
@@ -764,7 +764,9 @@ public sealed class LoginService
         {
             if (scope.ClaimTable != null)
                 continue;
-            yield return $", {prefix}{SafeColumn(column)} AS {SafeColumn(ScopeSpec.ClaimKeyFor(column, scope))}";
+            // self: the value is the caller's own users.id.
+            var source = scope.Self ? "id" : SafeColumn(column);
+            yield return $", {prefix}{source} AS {SafeColumn(ScopeSpec.ClaimKeyFor(column, scope))}";
         }
     }
 

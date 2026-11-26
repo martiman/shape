@@ -155,6 +155,11 @@ public static class TenancyResolver
                 "Use either 'warn' or 'error'.");
         }
 
+        if (scope.Self && (scope.Multi || scope.ClaimTable != null))
+            throw ConfigInvalid(
+                $"Config key `scopes.{column}.self` cannot be combined with `multi` or `claim_table`.",
+                "self means one value: the caller's own users.id.");
+
         if (scope.ClaimTable != null)
         {
             if (string.IsNullOrWhiteSpace(scope.ClaimTable.Table) || !IsSqlIdentifier(scope.ClaimTable.Table))

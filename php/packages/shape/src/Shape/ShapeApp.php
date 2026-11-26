@@ -1259,7 +1259,7 @@ final class ShapeApp
         }
 
         // security: 'strict' — secure-by-default preset (TOKEN-EXCHANGE.md /
-        // brownfield adapter guide §4). Runs again after the DB-mode
+        // TISCLOUD-SHAPE-EXTRACTION-PLAN §4). Runs again after the DB-mode
         // admin-mask merge; here it covers the entity-first path.
         self::validateStrictSecurity($config);
 
@@ -1413,7 +1413,7 @@ final class ShapeApp
      * the canonical spec with convention defaults. Returns a map keyed by
      * column; [] when scopes are off.
      *
-     * @return array<string, array{column:string,claim:string,unscoped_roles:list<string>,multi:bool,claim_table:?array{table:string,user_column:string},nullable:string,oidc_auto_provision_value:int|string|null}>
+     * @return array<string, array{column:string,claim:string,unscoped_roles:list<string>,multi:bool,claim_table:?array{table:string,user_column:string},self:bool,nullable:string,oidc_auto_provision_value:int|string|null}>
      */
     private static function normalizeScopes(mixed $value): array
     {
@@ -1485,6 +1485,18 @@ final class ShapeApp
                 $claimTable = ['table' => $table, 'user_column' => $userColumn];
             }
 
+            // `self`: the scope value is the caller's own users.id (a user sees only own rows).
+            $self = ($spec['self'] ?? false) === true;
+            if ($self && ($multi || $claimTable !== null)) {
+                throw new ApiException(
+                    'CONFIG_INVALID',
+                    "scopes.{$column}.self cannot be combined with 'multi' or 'claim_table'.",
+                    500,
+                    null,
+                    ['hint' => "self means one value: the caller's own users.id."]
+                );
+            }
+
             $nullable = strtolower((string)($spec['nullable'] ?? 'warn'));
             if (!in_array($nullable, ['warn', 'error'], true)) {
                 throw new ApiException(
@@ -1507,6 +1519,7 @@ final class ShapeApp
                 'unscoped_roles' => self::stringList($spec['unscoped_roles'] ?? []),
                 'multi' => $multi,
                 'claim_table' => $claimTable,
+                'self' => $self,
                 'nullable' => $nullable,
                 'oidc_auto_provision_value' => $oidcValue,
             ];

@@ -650,7 +650,7 @@ final class OidcVerifier
                 $context[$claim] = $this->fetchScopeMemberships($claimTable, (string)$column, $context['id']);
                 continue;
             }
-            $value = $rowValues[(string)$column] ?? null;
+            $value = ($spec['self'] ?? false) === true ? $context['id'] : ($rowValues[(string)$column] ?? null);
             $value = $value !== null && $value !== '' ? (is_numeric($value) ? (int)$value : (string)$value) : null;
             $context[$claim] = ($spec['multi'] ?? false) ? ($value === null ? [] : [$value]) : $value;
         }
@@ -726,7 +726,7 @@ final class OidcVerifier
         // start empty.
         $scopeValues = [];
         foreach ($this->scopesConfig() as $column => $spec) {
-            if (($spec['claim_table'] ?? null) !== null) {
+            if (($spec['claim_table'] ?? null) !== null || ($spec['self'] ?? false) === true) {
                 continue;
             }
             $value = $spec['oidc_auto_provision_value'] ?? null;
@@ -778,7 +778,7 @@ final class OidcVerifier
                 $context[$claim] = []; // freshly provisioned — no memberships yet
                 continue;
             }
-            $stamped = $scopeValues[(string)$column] ?? null;
+            $stamped = ($spec['self'] ?? false) === true ? $newId : ($scopeValues[(string)$column] ?? null);
             $context[$claim] = ($spec['multi'] ?? false) ? ($stamped === null ? [] : [$stamped]) : $stamped;
         }
         $context['_local_user'] = [
@@ -839,7 +839,7 @@ final class OidcVerifier
     {
         $cols = [];
         foreach ($this->scopesConfig() as $column => $spec) {
-            if (($spec['claim_table'] ?? null) !== null) {
+            if (($spec['claim_table'] ?? null) !== null || ($spec['self'] ?? false) === true) {
                 continue;
             }
             $col = (string)$column;

@@ -68,6 +68,13 @@ public sealed class ScopeConfig
     public ClaimTableConfig? ClaimTable { get; set; }
 
     /// <summary>
+    /// When true the scope value is the caller's own <c>users.id</c> (a user sees and writes
+    /// only own rows). No <c>users.&lt;column&gt;</c> or membership table is needed.
+    /// Cannot be combined with <see cref="Multi"/> or <see cref="ClaimTable"/>.
+    /// </summary>
+    public bool Self { get; set; }
+
+    /// <summary>
     /// Behavior when the dimension column is nullable: <c>"warn"</c> (default,
     /// boot warning — NULL rows are invisible to scoped callers) or
     /// <c>"error"</c> (boot <c>CONFIG_INVALID</c>).

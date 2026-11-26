@@ -564,6 +564,7 @@ Tenancy isolates *organizations*; `scopes` isolates any *dimension* inside one �
         'claim'          => 'department_id',        // JWT claim (default: the column name)
         'unscoped_roles' => ['controller'],         // roles that see across this dimension (default: none)
         'multi'          => false,                  // true → claim is a LIST, predicate becomes IN
+        'self'           => false,                  // true → the value is the caller's own users.id (see below)
         'claim_table'    => null,                   // multi-membership source, e.g.
                                                     // ['table' => 'user_departments', 'user_column' => 'user_id']
                                                     // default: single value read from users.<column>
@@ -572,6 +573,16 @@ Tenancy isolates *organizations*; `scopes` isolates any *dimension* inside one �
     // 'cost_center_id' => [...], 'branch_id' => [...]
 ],
 ```
+
+**Own rows only (`self`).** For "a user sees only their own rows" — time tracking, notes, orders — set `'self' => true`. The scope value is then the logged-in user's own `users.id`, so the discriminator column on the data tables (e.g. `worklogs.user_id`) needs no matching column on `users` and no membership table:
+
+```php
+'scopes' => [
+    'user_id' => ['self' => true, 'unscoped_roles' => ['admin']],
+],
+```
+
+Users see and write only rows with their own `user_id` (a forged value → `SCOPE_MISMATCH`; omitted → stamped); `admin` sees and writes all rows. `self` cannot be combined with `multi` or `claim_table`.
 
 Deliberately different from `tenancy` (these are not bugs to fix later):
 

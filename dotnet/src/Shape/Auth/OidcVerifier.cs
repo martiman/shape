@@ -633,6 +633,9 @@ public sealed class OidcVerifier
         {
             foreach (var (column, scope) in _scopes)
             {
+                if (scope.Self)
+                    continue; // claim = the new user's own id
+
                 if (scope.ClaimTable != null)
                     throw new ApiException(
                         "AUTH_CONFIG_ERROR",
@@ -703,7 +706,7 @@ public sealed class OidcVerifier
     /// <summary>Scope columns whose value lives on the users row (membership-table scopes excluded).</summary>
     private List<string> UsersRowScopeColumns() =>
         _scopes is { Count: > 0 }
-            ? _scopes.Where(kv => kv.Value.ClaimTable == null).Select(kv => kv.Key).ToList()
+            ? _scopes.Where(kv => kv.Value.ClaimTable == null && !kv.Value.Self).Select(kv => kv.Key).ToList()
             : new List<string>();
 
     /// <summary>
@@ -742,7 +745,7 @@ public sealed class OidcVerifier
                 continue;
             }
 
-            var value = usersRowValues.GetValueOrDefault(column);
+            var value = scope.Self ? context.GetValueOrDefault("id") : usersRowValues.GetValueOrDefault(column);
             if (scope.Multi && value != null)
                 value = new List<object?> { value };
             context[claimKey] = value;

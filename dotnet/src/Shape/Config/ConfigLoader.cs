@@ -356,6 +356,8 @@ public static class ConfigLoader
                             .ToList();
                     if (prop.Value.TryGetProperty("multi", out var multi) && multi.ValueKind is JsonValueKind.True or JsonValueKind.False)
                         scope.Multi = multi.GetBoolean();
+                    if (prop.Value.TryGetProperty("self", out var self) && self.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                        scope.Self = self.GetBoolean();
                     if (prop.Value.TryGetProperty("nullable", out var nullable) && nullable.ValueKind == JsonValueKind.String)
                         scope.Nullable = nullable.GetString() ?? scope.Nullable;
                     if (prop.Value.TryGetProperty("claim_table", out var claimTable) && claimTable.ValueKind == JsonValueKind.Object)

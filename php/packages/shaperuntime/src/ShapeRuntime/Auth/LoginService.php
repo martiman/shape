@@ -637,7 +637,8 @@ final class LoginService
                 $claims[$claim] = $this->fetchScopeMemberships($claimTable, (string)$column, $user['id'] ?? null);
                 continue;
             }
-            $value = $user[$column] ?? $user[$claim] ?? null;
+            // `self`: the scope value is the caller's own users.id (e.g. a user sees only own rows).
+            $value = ($spec['self'] ?? false) === true ? ($user['id'] ?? null) : ($user[$column] ?? $user[$claim] ?? null);
             $value = $value !== null && $value !== '' ? $this->normalizeTenantId($value) : null;
             $claims[$claim] = ($spec['multi'] ?? false) ? ($value === null ? [] : [$value]) : $value;
         }
@@ -858,7 +859,7 @@ final class LoginService
     {
         $cols = [];
         foreach ($this->scopesConfig() as $column => $spec) {
-            if (($spec['claim_table'] ?? null) !== null) {
+            if (($spec['claim_table'] ?? null) !== null || ($spec['self'] ?? false) === true) {
                 continue;
             }
             $col = (string)$column;
