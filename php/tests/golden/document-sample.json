@@ -1,0 +1,272 @@
+{
+ "spec": {
+  "title": "Faktura {number}",
+  "locale": "cs",
+  "footer": "Faktura {number}   strana {page} / {pages}",
+  "blocks": [
+   {
+    "type": "heading",
+    "text": "Faktura č. {number}",
+    "size": 20
+   },
+   {
+    "type": "fields",
+    "columns": 2,
+    "items": [
+     {
+      "label": "Odběratel",
+      "value": "{customer}"
+     },
+     {
+      "label": "Splatnost",
+      "value": "{due|date}"
+     },
+     {
+      "label": "Vystaveno",
+      "value": "{issued|datetime}"
+     },
+     {
+      "label": "Celkem k úhradě",
+      "value": "{total|number:2} Kč"
+     }
+    ]
+   },
+   {
+    "type": "line"
+   },
+   {
+    "type": "text",
+    "text": "Děkujeme za Vaši objednávku. Příliš žluťoučký kůň úpěl ďábelské ódy. ĚŠČŘŽÝÁÍÉÚŮĎŤŇ ěščřžýáíéúůďťň – „uvozovky“ € 1 234,50 Averyveryveryveryveryveryveryveryveryveryveryveryveryveryveryveryverylongwordthatmustbebroken"
+   },
+   {
+    "type": "spacer",
+    "height": 8
+   },
+   {
+    "type": "table",
+    "columns": [
+     {
+      "field": "name",
+      "label": "Položka",
+      "width": 5
+     },
+     {
+      "field": "qty",
+      "label": "Množství",
+      "format": "number:1"
+     },
+     {
+      "field": "total",
+      "label": "Cena",
+      "format": "number:2",
+      "sum": true
+     },
+     {
+      "field": "flag",
+      "label": "OK",
+      "format": "",
+      "align": "center"
+     }
+    ],
+    "footer": "Celkem"
+   },
+   {
+    "type": "text",
+    "text": "Konec dokumentu.",
+    "bold": true
+   }
+  ]
+ },
+ "data": {
+  "number": "2026-0042",
+  "customer": "Trafinoil s.r.o.\nU Rafinerie 12\n160 00 Praha",
+  "due": "2026-12-15",
+  "issued": "2026-11-26 14:05:00",
+  "total": 123456.5
+ },
+ "tableRows": {
+  "5": [
+   {
+    "name": "Položka č. 1 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 0.5,
+    "total": 123.456,
+    "flag": false
+   },
+   {
+    "name": "Položka č. 2 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 1.0,
+    "total": 246.912,
+    "flag": true
+   },
+   {
+    "name": "Položka č. 3 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 1.5,
+    "total": 370.368,
+    "flag": false
+   },
+   {
+    "name": "Položka č. 4 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 2.0,
+    "total": 493.824,
+    "flag": true
+   },
+   {
+    "name": "Položka č. 5 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 2.5,
+    "total": 617.28,
+    "flag": false
+   },
+   {
+    "name": "Položka č. 6 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 3.0,
+    "total": 740.736,
+    "flag": true
+   },
+   {
+    "name": "Položka č. 7 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 3.5,
+    "total": 864.192,
+    "flag": false
+   },
+   {
+    "name": "Položka č. 8 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 4.0,
+    "total": 987.648,
+    "flag": true
+   },
+   {
+    "name": "Položka č. 9 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 4.5,
+    "total": 1111.104,
+    "flag": false
+   },
+   {
+    "name": "Položka č. 10 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 5.0,
+    "total": 1234.56,
+    "flag": true
+   },
+   {
+    "name": "Položka č. 11 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 5.5,
+    "total": 1358.016,
+    "flag": false
+   },
+   {
+    "name": "Položka č. 12 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 6.0,
+    "total": 1481.472,
+    "flag": true
+   },
+   {
+    "name": "Položka č. 13 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 6.5,
+    "total": 1604.928,
+    "flag": false
+   },
+   {
+    "name": "Položka č. 14 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 7.0,
+    "total": 1728.384,
+    "flag": true
+   },
+   {
+    "name": "Položka č. 15 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 7.5,
+    "total": 1851.84,
+    "flag": false
+   },
+   {
+    "name": "Položka č. 16 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 8.0,
+    "total": 1975.296,
+    "flag": true
+   },
+   {
+    "name": "Položka č. 17 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 8.5,
+    "total": 2098.752,
+    "flag": false
+   },
+   {
+    "name": "Položka č. 18 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 9.0,
+    "total": 2222.208,
+    "flag": true
+   },
+   {
+    "name": "Položka č. 19 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 9.5,
+    "total": 2345.664,
+    "flag": false
+   },
+   {
+    "name": "Položka č. 20 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 10.0,
+    "total": 2469.12,
+    "flag": true
+   },
+   {
+    "name": "Položka č. 21 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 10.5,
+    "total": 2592.576,
+    "flag": false
+   },
+   {
+    "name": "Položka č. 22 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 11.0,
+    "total": 2716.032,
+    "flag": true
+   },
+   {
+    "name": "Položka č. 23 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 11.5,
+    "total": 2839.488,
+    "flag": false
+   },
+   {
+    "name": "Položka č. 24 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 12.0,
+    "total": 2962.944,
+    "flag": true
+   },
+   {
+    "name": "Položka č. 25 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 12.5,
+    "total": 3086.4,
+    "flag": false
+   },
+   {
+    "name": "Položka č. 26 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 13.0,
+    "total": 3209.856,
+    "flag": true
+   },
+   {
+    "name": "Položka č. 27 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 13.5,
+    "total": 3333.312,
+    "flag": false
+   },
+   {
+    "name": "Položka č. 28 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 14.0,
+    "total": 3456.768,
+    "flag": true
+   },
+   {
+    "name": "Položka č. 29 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 14.5,
+    "total": 3580.224,
+    "flag": false
+   },
+   {
+    "name": "Položka č. 30 s dlouhým popisem, který se musí zalomit na více řádků, protože je opravdu velmi dlouhý",
+    "qty": 15.0,
+    "total": 3703.68,
+    "flag": true
+   }
+  ]
+ },
+ "created": "20261126120000Z"
+}

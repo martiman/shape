@@ -26,6 +26,8 @@
 
   <ItemGroup>
     <Compile Include="src/**/*.cs" />
+    <!-- Bundled DejaVu Sans subsets (Czech/Latin) for PDF documents; license: src/Shape/Pdf/Fonts/LICENSE_DEJAVU -->
+    <EmbeddedResource Include="src/Shape/Pdf/Fonts/*.ttf" LogicalName="Shape.Pdf.Fonts.%(Filename)%(Extension)" />
     <None Include="README.md" Pack="true" PackagePath="\" Condition="Exists('README.md')" />
   </ItemGroup>
 

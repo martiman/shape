@@ -92,6 +92,12 @@ public sealed class ShapeConfig
     /// </summary>
     public NotificationsConfig? Notifications { get; set; }
 
+    /// <summary>
+    /// PDF documents (declarative layout filled from masks run in the caller's context); route
+    /// <c>GET /pdf/&lt;name&gt;?&lt;params&gt;</c>. Each document is a spec dictionary — see <see cref="Shape.Pdf.DocumentService"/>.
+    /// </summary>
+    public Dictionary<string, Dictionary<string, object?>>? Documents { get; set; }
+
     /// <summary>Tables exposed only via <see cref="AdminMasks"/>. Defaults: <c>users</c>, <c>refresh_tokens</c>, <c>audit_log</c>, <c>notification_outbox</c>.</summary>
     public List<string> SecretTables { get; set; } = new() { "users", "refresh_tokens", "audit_log", "notification_outbox" };
 

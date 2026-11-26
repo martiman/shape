@@ -22,6 +22,7 @@ use Shape\Generator\OpenApiGenerator;
 use Shape\Http\CacheHeaders;
 use Shape\Mcp\HttpTransport as McpHttpTransport;
 use Shape\Mcp\McpServer;
+use Shape\Pdf\DocumentService;
 use Shape\Upload\AttachmentService;
 use Shape\Upload\UploadManager;
 use Throwable;
@@ -52,6 +53,12 @@ final class ShapeRouter
         // Authorised through the attachment table's scoped .get mask, never served statically.
         if (in_array($method, ['GET', 'DELETE'], true) && str_starts_with($pathInfo, 'files/')) {
             self::wrapErrors(fn() => self::serveFile($method, substr($pathInfo, strlen('files/')), $config, $authConfig, $masks, $shapeData));
+            return;
+        }
+
+        // ── PDF documents: GET /api.php/pdf/<name>?<params>. Data comes from masks run in the caller's context.
+        if ($method === 'GET' && str_starts_with($pathInfo, 'pdf/')) {
+            self::wrapErrors(fn() => self::servePdf(substr($pathInfo, strlen('pdf/')), $config, $authConfig, $masks, $shapeData));
             return;
         }
 
@@ -897,6 +904,41 @@ final class ShapeRouter
             }
         }
         return $executor;
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     * @param array<string, mixed> $authConfig
+     * @param array<string, mixed> $masks
+     * @param array<string, mixed> $shapeData
+     */
+    private static function servePdf(string $name, array $config, array $authConfig, array $masks, array $shapeData): void
+    {
+        $documents = is_array($config['documents'] ?? null) ? $config['documents'] : [];
+        if ($documents === [] || $name === '') {
+            self::jsonError(404, 'NOT_FOUND', $documents === [] ? 'No documents are configured.' : 'Use /api.php/pdf/<name>?<params>.');
+            return;
+        }
+        $database = new Database($config['db'] ?? []);
+        $guard = (($authConfig['driver'] ?? 'none') === 'jwt')
+            ? new JwtGuard($authConfig, $database)
+            : new NullGuard();
+        $auth = $guard->authorize(self::normalizeHeaders(self::readHeaders()));
+        $service = new DocumentService(
+            self::buildExecutor($config, $shapeData, $database, new MaskRegistry($masks), new ValidatorRegistry($config['validators'] ?? [])),
+            $documents
+        );
+        $qs = [];
+        parse_str((string)($_SERVER['QUERY_STRING'] ?? ''), $qs);
+        $doc = $service->render($name, $qs, $auth);
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="' . $doc['filename'] . '"');
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: private, no-store');
+        header('Content-Length: ' . strlen($doc['pdf']));
+        http_response_code(200);
+        echo $doc['pdf'];
     }
 
     /**

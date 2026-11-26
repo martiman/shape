@@ -6,6 +6,7 @@ using Shape.Core;
 using Shape.Http;
 using Shape.Generator;
 using Shape.Mcp;
+using Shape.Pdf;
 using Shape.Upload;
 
 namespace Shape;
@@ -141,6 +142,27 @@ public static class ShapeRouter
         await stream.CopyToAsync(context.Response.Body);
     }
 
+    private static async Task HandlePdf(HttpContext context, ShapeConfig config, OpDispatcher dispatcher, string name)
+    {
+        if (config.Documents == null || config.Documents.Count == 0 || name.Length == 0)
+            throw new ApiException("NOT_FOUND", config.Documents == null || config.Documents.Count == 0
+                ? "No documents are configured." : "Use /pdf/<name>?<params>.", 404);
+
+        using var database = dispatcher.CreateDatabase();
+        var authContext = dispatcher.BuildGuard(database).Authorize(AdminAuth.NormalizeHeaders(context));
+        var service = new DocumentService(dispatcher.CreateExecutor(database), config.Documents);
+        var query = context.Request.Query.ToDictionary(kv => kv.Key, kv => (string?)kv.Value.ToString(), StringComparer.Ordinal);
+        var doc = service.Render(name, query, authContext);
+
+        context.Response.StatusCode = 200;
+        context.Response.ContentType = "application/pdf";
+        context.Response.Headers["Content-Disposition"] = $"inline; filename=\"{doc.Filename}\"";
+        context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+        context.Response.Headers["Cache-Control"] = "private, no-store";
+        context.Response.ContentLength = doc.Pdf.Length;
+        await context.Response.Body.WriteAsync(doc.Pdf);
+    }
+
     private static Task HandleGet(
         HttpContext context,
         ShapeConfig config,
@@ -154,6 +176,13 @@ public static class ShapeRouter
         return FatalHandler.RunSafelyAsync(context, async () =>
         {
             var pathInfo = (path ?? string.Empty).Trim('/');
+
+            // PDF documents: GET /pdf/<name>?<params>; the data comes from masks run in the caller's context.
+            if (pathInfo.StartsWith("pdf/", StringComparison.Ordinal))
+            {
+                await HandlePdf(context, config, dispatcher, pathInfo["pdf/".Length..]);
+                return;
+            }
 
             // Private attachments: GET /files/<upload>/<id>, authorised through the attachment table's scoped .get mask.
             if (pathInfo.StartsWith("files/", StringComparison.Ordinal))

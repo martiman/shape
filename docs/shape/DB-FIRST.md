@@ -1057,6 +1057,64 @@ Options: `--rule=NAME`, `--dry-run` (show what would be queued/sent, write nothi
 
 **What it is not (yet):** no per-event instant mails (a cron run is the trigger; for "ticket assigned" write the outbox row from an after-hook), no unsubscribe link beyond `optout_column`, no reply handling, and no templates beyond the table layout.
 
+## PDF documents
+
+Invoices, protocols, timesheets: a **document** is a declarative layout filled from masks. It is generated on the server, **in the caller's own context**, so row scopes, tenancy and mask roles decide what a PDF may contain — a user can only print what they could read. There is no HTML engine and no external tool (nothing to install on shared hosting): Shape lays the blocks out itself and embeds a bundled DejaVu Sans subset, so Czech, Slovak, Polish and German text — diacritics, `€`, quotes — render correctly.
+
+```php
+// config/database.php
+'documents' => [
+    'invoice' => [
+        'mask'     => 'invoices.get',                // first row = data for {placeholders}
+        'params'   => ['id'],                        // query-string parameters accepted and passed to the masks
+        'roles'    => ['admin', 'user'],             // optional extra role gate (mask roles apply as well)
+        'filename' => 'faktura-{number}.pdf',
+        'title'    => 'Faktura {number}',
+        'locale'   => 'cs',                          // 'cs' (1 234,50 · 26. 11. 2026) or 'en' (1,234.50 · 2026-11-26)
+        'footer'   => '{number}   strana {page} / {pages}',
+        'page'     => ['size' => 'A4', 'orientation' => 'portrait', 'margin' => 40],
+        'blocks'   => [
+            ['type' => 'heading', 'text' => 'Faktura č. {number}', 'size' => 18],
+            ['type' => 'fields', 'columns' => 2, 'items' => [
+                ['label' => 'Odběratel', 'value' => "{customer}"],
+                ['label' => 'Splatnost', 'value' => '{due|date}'],
+            ]],
+            ['type' => 'line'],
+            ['type' => 'table', 'mask' => 'invoice_items.byInvoiceId', 'params' => ['invoice_id' => '{id}'],
+             'columns' => [
+                 ['field' => 'name',  'label' => 'Položka',  'width' => 5],
+                 ['field' => 'qty',   'label' => 'Množství', 'format' => 'number:1'],
+                 ['field' => 'total', 'label' => 'Cena',     'format' => 'number:2', 'sum' => true],
+             ],
+             'footer' => 'Celkem k úhradě', 'empty' => 'Žádné položky'],
+            ['type' => 'text', 'text' => 'Děkujeme za objednávku.'],
+        ],
+    ],
+],
+```
+
+```csharp
+// .NET: the spec is a dictionary with the same keys
+Documents = new() { ["invoice"] = new() { ["mask"] = "invoices.get", ["params"] = new List<object?> { "id" }, /* … */ } },
+```
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" "https://api.example.com/api.php/pdf/invoice?id=42" -o faktura.pdf   # PHP
+curl -H "Authorization: Bearer $TOKEN" "https://api.example.com/pdf/invoice?id=42" -o faktura.pdf          # .NET
+```
+
+**Blocks:** `heading` (`size`), `text` (`size`, `bold`), `fields` (`columns` 1–4, `items` of label + value), `table`, `spacer` (`height`), `line`. A `table` takes `columns` (`field`, `label`, `width` = relative weight, `align`, `format`, `sum`) and rows from its own `mask` (parameters may refer to `{placeholders}` of the header row, e.g. `'invoice_id' => '{id}'`) or inline `rows`. Cells wrap, the header repeats on every page, columns marked `sum` get a total row (`footer` = its label), numbers and dates align right by default. Pagination and the `{page}` / `{pages}` footer are automatic.
+
+**Placeholders:** `{field}` or `{field|format}` read the header row; formats are `number:N` (N decimals), `int`, `date`, `datetime`. Unknown placeholders render empty, booleans as `ano` / `ne` (`yes` / `no` in `en`).
+
+**Errors:** a missing required parameter is `DOCUMENT_VALIDATION_ERROR` (400); a header row that is missing **or not visible to the caller** is `NOT_FOUND` (404, no existence oracle); a table above 2000 rows is `DOCUMENT_TOO_LARGE` (413) rather than a silently truncated document; a bad spec (unknown block type) is `DOCUMENT_CONFIG_ERROR` (500).
+
+**Output:** `application/pdf`, `Content-Disposition: inline`, `nosniff`, `Cache-Control: private, no-store`. Generation is deterministic — the same data gives the same bytes — and the PHP and .NET ports produce **byte-identical** PDFs (verified against a shared golden file in `php/tests/golden/`).
+
+**Fonts and size:** `DejaVuSans-Subset.ttf` / `DejaVuSans-Bold-Subset.ttf` (Latin, Latin-1, Latin Extended-A, common punctuation, `€`, `™`, `−`; ~23 kB each, DejaVu license in `resources/fonts/LICENSE_DEJAVU`). A one-page invoice is ~30 kB. Characters outside the subset print as `?`. To use another TrueType font, pass your own `TrueTypeFont` instances to `DocumentRenderer`.
+
+**What it is not (yet):** no images or logos, no HTML/CSS, no right-to-left or complex scripts, no kerning, one font family (regular + bold). **Immutable invoices:** generate once and keep the bytes — store the result as an attachment (see *Private attachments*, with its `sha256`) and serve that file afterwards, so a later print can never differ from what was issued.
+
 ## Audit columns by convention
 
 Same idea as soft-delete, but for tracking who created/updated each row and when. Add any of these columns to a table and Shape stamps them automatically on insert / update — no hooks, no triggers, no ORM annotations.
