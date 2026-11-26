@@ -22,6 +22,7 @@ use Shape\Generator\OpenApiGenerator;
 use Shape\Http\CacheHeaders;
 use Shape\Mcp\HttpTransport as McpHttpTransport;
 use Shape\Mcp\McpServer;
+use Shape\Upload\AttachmentService;
 use Shape\Upload\UploadManager;
 use Throwable;
 
@@ -46,6 +47,13 @@ final class ShapeRouter
         $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
         $pathInfo = trim($_SERVER['PATH_INFO'] ?? '', '/');
         $queryString = $_SERVER['QUERY_STRING'] ?? '';
+
+        // ── Private attachments: GET|DELETE /api.php/files/<upload>/<id>.
+        // Authorised through the attachment table's scoped .get mask, never served statically.
+        if (in_array($method, ['GET', 'DELETE'], true) && str_starts_with($pathInfo, 'files/')) {
+            self::wrapErrors(fn() => self::serveFile($method, substr($pathInfo, strlen('files/')), $config, $authConfig, $masks, $shapeData));
+            return;
+        }
 
         // ── GET requests ──────────────────────────────────────────────
         if ($method === 'GET') {
@@ -145,7 +153,7 @@ final class ShapeRouter
         // type and response shape from JSON-envelope mutations.
         if ($method === 'POST' && str_starts_with($pathInfo, 'upload/')) {
             $uploadName = substr($pathInfo, strlen('upload/'));
-            self::wrapErrors(fn() => self::serveUpload($uploadName, $config, $authConfig));
+            self::wrapErrors(fn() => self::serveUpload($uploadName, $config, $authConfig, $masks, $shapeData));
             return;
         }
 
@@ -218,25 +226,7 @@ final class ShapeRouter
             $database = new Database($dbConfig);
             $registry = new MaskRegistry($masks);
             $validatorRegistry = new ValidatorRegistry($validators);
-            $executor = new BatchExecutor($database, $registry, $validatorRegistry);
-            if (is_array($config['tenancy'] ?? null) || is_array($config['scopes'] ?? null)) {
-                $executor->setScoping(
-                    is_array($config['tenancy'] ?? null) ? $config['tenancy'] : [],
-                    is_array($config['scopes'] ?? null) ? $config['scopes'] : [],
-                );
-            }
-
-            // Audit log: when ShapeApp detected the audit_log table at boot
-            // and stashed the name in _shape, wire an AuditLogger so every
-            // successful mutation appends one row.
-            $auditTable = $shapeData['audit_log_table'] ?? null;
-            if (is_string($auditTable) && $auditTable !== '') {
-                $auditLogger = new \Shape\Audit\AuditLogger($database, $auditTable);
-                $executor->setAuditLogger(
-                    static fn(string $t, string $a, ?string $rid, array $auth, array $cols) =>
-                        $auditLogger->log($t, $a, $rid, $auth, $cols)
-                );
-            }
+            $executor = self::buildExecutor($config, $shapeData, $database, $registry, $validatorRegistry);
 
             $commandExecutor = new CommandExecutor($database, $executor, $commands, $config['command_roles'] ?? []);
             $adminAuth = new AdminAuth($authConfig);
@@ -869,11 +859,94 @@ final class ShapeRouter
     }
 
     /**
+     * One place that wires a BatchExecutor (scopes, tenancy, audit log) so the
+     * JSON API, uploads and file downloads all enforce the same rules.
+     *
+     * @param array<string, mixed> $config
+     * @param array<string, mixed> $shapeData
+     */
+    private static function buildExecutor(array $config, array $shapeData, Database $database, MaskRegistry $registry, ValidatorRegistry $validators): BatchExecutor
+    {
+        $executor = new BatchExecutor($database, $registry, $validators);
+        if (is_array($config['tenancy'] ?? null) || is_array($config['scopes'] ?? null)) {
+            $executor->setScoping(
+                is_array($config['tenancy'] ?? null) ? $config['tenancy'] : [],
+                is_array($config['scopes'] ?? null) ? $config['scopes'] : [],
+            );
+        }
+
+        // Audit log: when ShapeApp detected the audit_log table at boot
+        // and stashed the name in _shape, wire an AuditLogger so every
+        // successful mutation appends one row.
+        $auditTable = $shapeData['audit_log_table'] ?? null;
+        if (is_string($auditTable) && $auditTable !== '') {
+            $auditLogger = new \Shape\Audit\AuditLogger($database, $auditTable);
+            $executor->setAuditLogger(
+                static fn(string $t, string $a, ?string $rid, array $auth, array $cols) =>
+                    $auditLogger->log($t, $a, $rid, $auth, $cols)
+            );
+        }
+        return $executor;
+    }
+
+    /**
+     * GET streams an attachment, DELETE removes it. A row the caller may not
+     * see answers 404 exactly like a missing one.
+     *
+     * @param array<string, mixed> $config
+     * @param array<string, mixed> $authConfig
+     * @param array<string, mixed> $masks
+     * @param array<string, mixed> $shapeData
+     */
+    private static function serveFile(string $method, string $rest, array $config, array $authConfig, array $masks, array $shapeData): void
+    {
+        $uploads = is_array($config['uploads'] ?? null) ? $config['uploads'] : [];
+        $parts = explode('/', $rest);
+        if (count($parts) !== 2 || $parts[0] === '' || $parts[1] === '' || !isset($uploads[$parts[0]])) {
+            self::jsonError(404, 'NOT_FOUND', 'Use /api.php/files/<upload>/<id>.');
+            return;
+        }
+        [$name, $id] = $parts;
+        $database = new Database($config['db'] ?? []);
+        $guard = (($authConfig['driver'] ?? 'none') === 'jwt')
+            ? new JwtGuard($authConfig, $database)
+            : new NullGuard();
+        $auth = $guard->authorize(self::normalizeHeaders(self::readHeaders()));
+        $service = new AttachmentService(
+            new UploadManager($uploads),
+            self::buildExecutor($config, $shapeData, $database, new MaskRegistry($masks), new ValidatorRegistry($config['validators'] ?? []))
+        );
+        $key = ctype_digit($id) ? (int)$id : $id;
+
+        if ($method === 'DELETE') {
+            $service->delete($name, $key, $auth);
+            http_response_code(204);
+            return;
+        }
+
+        $file = $service->open($name, $key, $auth);
+        // RFC 5987 filename*, plus an ASCII fallback. attachment + nosniff: never rendered in the app origin.
+        $ascii = preg_replace('/[^A-Za-z0-9._-]+/', '_', $file['filename']) ?: 'file';
+        header('Content-Type: ' . ($file['mime_type'] !== '' ? $file['mime_type'] : 'application/octet-stream'));
+        header("Content-Disposition: attachment; filename=\"{$ascii}\"; filename*=UTF-8''" . rawurlencode($file['filename']));
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: private, no-store');
+        header('Content-Length: ' . $file['size']);
+        header('ETag: "' . $file['sha256'] . '"');
+        http_response_code(200);
+        fpassthru($file['stream']);
+        fclose($file['stream']);
+    }
+
+    /**
      * Dispatch a POST /api.php/upload/<name> request to the configured
      * upload endpoint. Auth flows through the same JwtGuard the rest of
      * the API uses; the per-endpoint role check happens inside UploadManager.
+     *
+     * @param array<string, mixed> $masks
+     * @param array<string, mixed> $shapeData
      */
-    private static function serveUpload(string $name, array $config, array $authConfig): void
+    private static function serveUpload(string $name, array $config, array $authConfig, array $masks = [], array $shapeData = []): void
     {
         $uploads = is_array($config['uploads'] ?? null) ? $config['uploads'] : [];
         if ($uploads === []) {
@@ -895,7 +968,10 @@ final class ShapeRouter
         $authContext = $guard->authorize(self::normalizeHeaders(self::readHeaders()));
 
         $manager = new UploadManager($uploads);
-        $result = $manager->handle($name, is_array($_FILES) ? $_FILES : [], $authContext);
+        $service = new AttachmentService($manager, self::buildExecutor($config, $shapeData, $database, new MaskRegistry($masks), new ValidatorRegistry($config['validators'] ?? [])));
+        $result = $service->isAttachmentEntry($name)
+            ? $service->upload($name, $_FILES, $_POST, $authContext)
+            : $manager->handle($name, $_FILES, $authContext);
 
         http_response_code(200);
         header('Content-Type: application/json');

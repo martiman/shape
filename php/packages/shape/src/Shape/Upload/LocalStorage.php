@@ -85,6 +85,16 @@ final class LocalStorage implements StorageInterface
         return is_file($this->path . '/' . $this->sanitizeKey($key));
     }
 
+    public function open(string $key)
+    {
+        $target = $this->path . '/' . $this->sanitizeKey($key);
+        if (!is_file($target)) {
+            return null;
+        }
+        $h = @fopen($target, 'rb');
+        return $h === false ? null : $h;
+    }
+
     public function delete(string $key): void
     {
         $target = $this->path . '/' . $this->sanitizeKey($key);

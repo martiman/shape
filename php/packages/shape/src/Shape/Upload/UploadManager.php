@@ -86,7 +86,11 @@ final class UploadManager
         // must not be stored (and later served) as .html.
         $key = $this->generateKey($detectedMime);
         $storage = $this->buildStorage($entry);
+        $sha256 = (string)hash_file('sha256', $file['tmp_name']);
         $url = $storage->put($key, $file['tmp_name'], $detectedMime);
+        // Private attachments are never served statically: no URL is exposed,
+        // the file is fetched through GET /api.php/files/<name>/<id>.
+        $isPrivate = is_array($entry['attachments'] ?? null);
 
         return [
             'id'        => $key,
@@ -96,8 +100,36 @@ final class UploadManager
             // a client claiming Content-Type: image/jpeg for what's actually
             // a text file would otherwise mislead downstream consumers.
             'mime_type' => $detectedMime,
-            'url'       => $url,
+            'sha256'    => $sha256,
+            'url'       => $isPrivate ? null : $url,
         ];
+    }
+
+    /** @return array<string, mixed>|null The configured upload entry, or null. */
+    public function entry(string $name): ?array
+    {
+        $e = $this->uploads[$name] ?? null;
+        return is_array($e) ? $e : null;
+    }
+
+    /** Storage backend of an upload entry (used by the attachment service). */
+    public function storageFor(string $name): StorageInterface
+    {
+        $entry = $this->entry($name);
+        if ($entry === null) {
+            throw new ApiException('NOT_FOUND', "Upload endpoint '{$name}' is not configured.", 404);
+        }
+        return $this->buildStorage($entry);
+    }
+
+    /** @param array<string, mixed> $authContext */
+    public function authorize(string $name, array $authContext): void
+    {
+        $entry = $this->entry($name);
+        if ($entry === null) {
+            throw new ApiException('NOT_FOUND', "Upload endpoint '{$name}' is not configured.", 404);
+        }
+        $this->authorizeRole($entry, $authContext);
     }
 
     /** @return list<string> Names of configured upload endpoints. */

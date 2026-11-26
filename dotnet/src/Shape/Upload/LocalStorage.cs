@@ -65,6 +65,14 @@ public sealed class LocalStorage : IStorage
 
     public bool Exists(string key) => File.Exists(Path.Combine(_path, SanitizeKey(key)));
 
+    public Stream? Open(string key)
+    {
+        var target = Path.Combine(_path, SanitizeKey(key));
+        return File.Exists(target)
+            ? new FileStream(target, FileMode.Open, FileAccess.Read, FileShare.Read)
+            : null;
+    }
+
     public void Delete(string key)
     {
         var target = Path.Combine(_path, SanitizeKey(key));

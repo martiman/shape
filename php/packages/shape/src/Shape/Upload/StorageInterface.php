@@ -27,6 +27,14 @@ interface StorageInterface
     /** Whether a previously-stored object exists. */
     public function exists(string $key): bool;
 
+    /**
+     * Open the object for reading (private attachments are streamed through
+     * Shape after an authorisation check instead of being served statically).
+     *
+     * @return resource|null null when the key does not exist
+     */
+    public function open(string $key);
+
     /** Remove the object. No-op if the key doesn't exist. */
     public function delete(string $key): void;
 

@@ -94,6 +94,12 @@ public sealed class OpDispatcher
     public ValidatorRegistry Validators => _validators;
     public Database CreateDatabase() => new(_dbConfig);
 
+    /// <summary>
+    /// A fully wired executor (scopes, tenancy, audit log) for code outside the op set — e.g. the
+    /// attachment service — so it enforces exactly the rules the JSON API does.
+    /// </summary>
+    public BatchExecutor CreateExecutor(Database database) => BuildExecutor(database);
+
     public (Dictionary<string, object?> Result, int Status) Dispatch(
         HttpContext context,
         string op,

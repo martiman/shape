@@ -68,6 +68,7 @@ public sealed class UploadManager
         // must not be stored (and later served) as .html.
         var key = GenerateKey(detectedMime);
         var storage = BuildStorage(entry);
+        var sha256 = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
         var url = storage.Put(key, bytes, detectedMime);
 
         return new Dictionary<string, object?>
@@ -76,8 +77,30 @@ public sealed class UploadManager
             ["filename"] = file.FileName,
             ["size"] = bytes.LongLength,
             ["mime_type"] = detectedMime,
-            ["url"] = url
+            ["sha256"] = sha256,
+            // Private attachments are never served statically: no URL is exposed,
+            // the file is fetched through GET /files/<name>/<id>.
+            ["url"] = entry.Attachments != null ? null : url
         };
+    }
+
+    /// <summary>The configured upload entry, or <c>null</c>.</summary>
+    public UploadEntry? Entry(string name) => _uploads.TryGetValue(name, out var e) ? e : null;
+
+    /// <summary>Storage backend of an upload entry (used by the attachment service).</summary>
+    public IStorage StorageFor(string name)
+    {
+        var entry = Entry(name)
+            ?? throw new ApiException("NOT_FOUND", $"Upload endpoint '{name}' is not configured.", 404);
+        return BuildStorage(entry);
+    }
+
+    /// <summary>Role gate of an upload endpoint.</summary>
+    public void Authorize(string name, Dictionary<string, object?> authContext)
+    {
+        var entry = Entry(name)
+            ?? throw new ApiException("NOT_FOUND", $"Upload endpoint '{name}' is not configured.", 404);
+        AuthorizeRole(entry, authContext);
     }
 
     // ── Internals ─────────────────────────────────────────────────────
@@ -185,10 +208,15 @@ public sealed class UploadManager
 
         // Detect from magic bytes, not the client-supplied Content-Type
         // (trivially spoofable). The detected value is what gets returned.
-        var detected = DetectMimeType(bytes, file.ContentType);
-
         var allowed = entry.MimeTypes;
-        if (allowed != null && allowed.Count > 0 && !allowed.Contains(detected))
+        var restricted = allowed != null && allowed.Count > 0;
+        // With an allow-list the type must be PROVEN by the content: falling back to the
+        // client-supplied Content-Type would let "text" labelled application/pdf through
+        // (the PHP side uses finfo and never trusts the header).
+        var sniffed = SniffMimeType(bytes);
+        var detected = restricted ? sniffed ?? "application/octet-stream" : DetectMimeType(bytes, file.ContentType);
+
+        if (restricted && !allowed!.Contains(detected))
         {
             throw new ApiException(
                 "UPLOAD_VALIDATION_ERROR",
@@ -249,7 +277,11 @@ public sealed class UploadManager
     /// Falls back to the client-supplied <c>Content-Type</c> when nothing
     /// matches, finally to <c>application/octet-stream</c>.
     /// </summary>
-    internal static string DetectMimeType(byte[] bytes, string clientHint)
+    internal static string DetectMimeType(byte[] bytes, string clientHint) =>
+        SniffMimeType(bytes) ?? (!string.IsNullOrEmpty(clientHint) ? clientHint : "application/octet-stream");
+
+    /// <summary>Magic-byte detection only; <c>null</c> when the content matches no known family.</summary>
+    internal static string? SniffMimeType(byte[] bytes)
     {
         if (bytes.Length >= 4)
         {
@@ -277,6 +309,6 @@ public sealed class UploadManager
                 return "image/webp";
         }
 
-        return !string.IsNullOrEmpty(clientHint) ? clientHint : "application/octet-stream";
+        return null;
     }
 }

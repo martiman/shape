@@ -20,6 +20,13 @@ public interface IStorage
     /// <summary>Whether a previously-stored object exists.</summary>
     bool Exists(string key);
 
+    /// <summary>
+    /// Open the object for reading (private attachments are streamed through Shape
+    /// after an authorisation check instead of being served statically).
+    /// Returns <c>null</c> when the key does not exist. The caller disposes the stream.
+    /// </summary>
+    Stream? Open(string key);
+
     /// <summary>Remove the object. No-op if the key doesn't exist.</summary>
     void Delete(string key);
 

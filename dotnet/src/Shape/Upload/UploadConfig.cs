@@ -21,6 +21,29 @@ public sealed class UploadEntry
 
     /// <summary>Description shown in manifest output.</summary>
     public string? Description { get; set; }
+
+    /// <summary>
+    /// When set, uploads become private attachments: a row of an ordinary table, streamed only through
+    /// <c>GET /files/&lt;name&gt;/&lt;id&gt;</c> after the table's roles and row scopes allow it. No public URL is exposed.
+    /// </summary>
+    public AttachmentsConfig? Attachments { get; set; }
+}
+
+/// <summary>
+/// Private-attachment settings of an upload endpoint. The table needs the columns
+/// <c>id, file_key, filename, mime_type, size_bytes, sha256</c> plus the <see cref="Fields"/>
+/// (and any scope/audit columns the app already uses).
+/// </summary>
+public sealed class AttachmentsConfig
+{
+    /// <summary>Ordinary table that holds one row per file; needs an <c>Access</c> entry.</summary>
+    public string Table { get; set; } = "";
+
+    /// <summary>Multipart form fields copied into the row (e.g. <c>case_id</c>).</summary>
+    public List<string> Fields { get; set; } = new();
+
+    /// <summary>Optional: form field → parent table. The caller must be able to read <c>&lt;table&gt;.get(id)</c> before anything is stored.</summary>
+    public Dictionary<string, string> Parents { get; set; } = new();
 }
 
 public sealed class StorageConfig

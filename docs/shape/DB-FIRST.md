@@ -657,9 +657,9 @@ The dev typically chains a normal mutation that links the URL or `id` into a dom
 
 ### What it doesn't do (current scope)
 
-- **No DB row insertion.** The upload route stores bytes and returns metadata; the dev chains a `POST {op:'mutation'}` if they want a row in their domain tables. Mixing upload and DML in one request adds disambiguation cost without much benefit — kept separate.
+- **No DB row insertion by default.** A plain upload entry stores bytes and returns metadata; the dev chains a `POST {op:'mutation'}` if they want a row. For documents that must be access-controlled (case files, contracts, damage photos) declare `attachments` — see *Private attachments* below.
 - **No multi-file uploads.** Send one file per request under the `file` form field. A future variant could batch.
-- **No signed URLs.** The `public_url` returned is the static-served path; the web server is expected to serve it. For private content with signed-URL access, write a custom handler that validates the request before reading from storage.
+- **No signed URLs.** The `public_url` returned is the static-served path; the web server is expected to serve it. For private content use *Private attachments* below (authorised streaming through Shape).
 - **No image processing.** Resize, crop, format-convert all happen in the dev's app or a downstream worker. Shape just stores bytes.
 
 ### Manifest exposure
@@ -689,6 +689,73 @@ POST /api.php
 ```
 
 Two requests, but each has clear semantics. Agents handle this well — the upload completes synchronously and the URL is in scope by the time the mutation runs.
+
+### Private attachments — files bound to a row, readable only through Shape
+
+Static URLs are fine for covers and logos, not for a lawyer's case file. Add an `attachments` block to the upload entry and the file becomes a **row of an ordinary table**; Shape stores it outside the webroot and streams it only after the table's own roles and row scopes allow it. Whoever cannot see the case cannot fetch its documents.
+
+```php
+'uploads' => [
+    'case_files' => [
+        'storage'     => ['driver' => 'local', 'path' => '/srv/app-files/case_files'],  // NOT under the webroot
+        'roles'       => ['admin', 'user'],
+        'max_size'    => 20 * 1024 * 1024,
+        'mime_types'  => ['application/pdf', 'image/jpeg'],
+        'attachments' => [
+            'table'   => 'case_files',             // ordinary table (below); needs an `access` entry
+            'fields'  => ['case_id'],              // form fields copied into the row
+            'parents' => ['case_id' => 'cases'],   // optional: caller must be able to read cases.get(case_id)
+        ],
+    ],
+],
+```
+
+```sql
+CREATE TABLE case_files (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  case_id INT NOT NULL REFERENCES cases(id),
+  owner_id INT NOT NULL,                 -- any scope column your app uses (self / tenant) works as usual
+  file_key VARCHAR(64) NOT NULL,         -- storage key, never exposed
+  filename VARCHAR(255) NOT NULL, mime_type VARCHAR(100) NOT NULL,
+  size_bytes BIGINT NOT NULL, sha256 CHAR(64) NOT NULL
+);
+```
+
+| Route | Does |
+|---|---|
+| `POST /api.php/upload/<name>` (multipart: `file` + declared fields) | stores the file, inserts the row, returns `{id, filename, size, mime_type, sha256, <fields>}` — **no URL** |
+| `GET /api.php/files/<name>/<id>` | streams the file (`attachment`, `nosniff`, `Cache-Control: private, no-store`, `ETag` = sha256) |
+| `DELETE /api.php/files/<name>/<id>` | deletes the row, then the file |
+
+Guarantees:
+
+- **Same rules as every mutation.** The row is inserted and deleted through `BatchExecutor`, so access roles, row scopes, tenancy, validators and the audit log apply; the scope value is stamped from the caller's token.
+- **404, not 403.** A row the caller may not see answers exactly like a missing one — no existence oracle.
+- **Parent checked first.** With `parents`, the referenced row is read through its scoped `.get` mask *before* anything is stored; uploading to somebody else's case stores nothing.
+- **No orphans.** If the insert is refused the stored file is removed; on delete the file goes after the row.
+- **Integrity.** `sha256` is computed from the uploaded bytes and kept in the row (useful for contracts and invoices).
+- Primary keys of the attachment and parent tables are assumed to be named `id`. Reading the table through the normal API (`/api.php/case_files`) lists metadata only; bytes are reachable solely through `/files/`.
+
+The .NET port has the same routes and behaviour (uploads are declared in code there):
+
+```csharp
+Uploads = new() {
+    ["case_files"] = new UploadEntry {
+        Storage = new() { Driver = "local", Path = "/srv/app-files/case_files" },
+        Roles = new() { "admin", "user" },
+        MimeTypes = new() { "application/pdf" },
+        Attachments = new AttachmentsConfig {
+            Table = "case_files",
+            Fields = new() { "case_id" },
+            Parents = new() { ["case_id"] = "cases" },
+        },
+    },
+},
+```
+
+With an `mime_types` allow-list the type must be **proven by the content** (magic bytes / finfo). A file the sniffer cannot identify is rejected even when the client sends `Content-Type: application/pdf`; without an allow-list the .NET port still falls back to the client header for unknown content, as before.
+
+Not covered yet: antivirus hook, versions of one document, and storage backends other than `local`.
 
 ## Bulk nested create — `relations` blocks
 

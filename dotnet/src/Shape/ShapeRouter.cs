@@ -25,11 +25,11 @@ public static class ShapeRouter
         var endpoint = NormalizeEndpoint(config.Endpoint);
         var catchAll = endpoint == "/" ? "/{**shapePath}" : endpoint.TrimEnd('/') + "/{**shapePath}";
 
-        app.MapGet(endpoint, context => HandleGet(context, config, dispatcher, manifestGen, openApiGen, mcpServer, null));
+        app.MapGet(endpoint, context => HandleGet(context, config, dispatcher, manifestGen, openApiGen, mcpServer, uploadManager, null));
         app.MapGet(catchAll, context =>
         {
             var path = context.Request.RouteValues.TryGetValue("shapePath", out var value) ? value?.ToString() : null;
-            return HandleGet(context, config, dispatcher, manifestGen, openApiGen, mcpServer, path);
+            return HandleGet(context, config, dispatcher, manifestGen, openApiGen, mcpServer, uploadManager, path);
         });
 
         app.MapPost(endpoint, context => HandlePost(context, config, dispatcher, manifestGen, openApiGen, mcpServer));
@@ -37,6 +37,18 @@ public static class ShapeRouter
         {
             var path = context.Request.RouteValues.TryGetValue("shapePath", out var value) ? value?.ToString() : null;
             return HandlePostPath(context, config, dispatcher, uploadManager, path);
+        });
+
+        app.MapMethods(catchAll, new[] { "DELETE" }, context =>
+        {
+            var path = context.Request.RouteValues.TryGetValue("shapePath", out var value) ? value?.ToString() : null;
+            return FatalHandler.RunSafelyAsync(context, async () =>
+            {
+                var pathInfo = (path ?? string.Empty).Trim('/');
+                if (!pathInfo.StartsWith("files/", StringComparison.Ordinal))
+                    throw new ApiException("BAD_REQUEST", "Only GET and POST are allowed.", 405);
+                await HandleFile(context, dispatcher, uploadManager, "DELETE", pathInfo["files/".Length..]);
+            });
         });
 
         app.MapMethods(endpoint, new[] { "OPTIONS" }, HttpTransport.HandleOptionsAsync);
@@ -69,13 +81,64 @@ public static class ShapeRouter
                 }
 
                 var form = await context.Request.ReadFormAsync();
-                var result = await uploadManager.HandleAsync(name, form.Files, authContext);
+                var service = new AttachmentService(uploadManager, dispatcher.CreateExecutor(database));
+                var result = service.IsAttachmentEntry(name)
+                    ? await service.UploadAsync(
+                        name,
+                        form.Files,
+                        form.ToDictionary(kv => kv.Key, kv => kv.Value.ToString(), StringComparer.Ordinal),
+                        authContext)
+                    : await uploadManager.HandleAsync(name, form.Files, authContext);
                 await JsonResponse.SuccessAsync(context, result);
                 return;
             }
 
             throw new ApiException("NOT_FOUND", $"Unknown POST path '{pathInfo}'.", 404);
         });
+    }
+
+    /// <summary>
+    /// GET streams an attachment, DELETE removes it. A row the caller may not see answers 404
+    /// exactly like a missing one.
+    /// </summary>
+    private static async Task HandleFile(
+        HttpContext context,
+        OpDispatcher dispatcher,
+        UploadManager uploadManager,
+        string method,
+        string rest)
+    {
+        var parts = rest.Split('/');
+        if (parts.Length != 2 || parts[0].Length == 0 || parts[1].Length == 0 || uploadManager.Entry(parts[0]) == null)
+            throw new ApiException("NOT_FOUND", "Use /files/<upload>/<id>.", 404);
+
+        var name = parts[0];
+        object id = long.TryParse(parts[1], out var n) && parts[1].All(char.IsDigit) ? n : parts[1];
+
+        using var database = dispatcher.CreateDatabase();
+        var authContext = dispatcher.BuildGuard(database).Authorize(AdminAuth.NormalizeHeaders(context));
+        var service = new AttachmentService(uploadManager, dispatcher.CreateExecutor(database));
+
+        if (method == "DELETE")
+        {
+            service.Delete(name, id, authContext);
+            context.Response.StatusCode = 204;
+            return;
+        }
+
+        var opened = service.Open(name, id, authContext);
+        await using var stream = opened.Stream;
+        // attachment + nosniff: never rendered in the app origin. RFC 5987 filename* plus an ASCII fallback.
+        var ascii = System.Text.RegularExpressions.Regex.Replace(opened.Filename, "[^A-Za-z0-9._-]+", "_");
+        context.Response.StatusCode = 200;
+        context.Response.ContentType = opened.MimeType.Length > 0 ? opened.MimeType : "application/octet-stream";
+        context.Response.Headers["Content-Disposition"] =
+            $"attachment; filename=\"{ascii}\"; filename*=UTF-8''{Uri.EscapeDataString(opened.Filename)}";
+        context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+        context.Response.Headers["Cache-Control"] = "private, no-store";
+        context.Response.Headers["ETag"] = $"\"{opened.Sha256}\"";
+        context.Response.ContentLength = opened.Size;
+        await stream.CopyToAsync(context.Response.Body);
     }
 
     private static Task HandleGet(
@@ -85,11 +148,19 @@ public static class ShapeRouter
         ManifestGenerator manifestGen,
         OpenApiGenerator openApiGen,
         McpServer mcpServer,
+        UploadManager uploadManager,
         string? path)
     {
         return FatalHandler.RunSafelyAsync(context, async () =>
         {
             var pathInfo = (path ?? string.Empty).Trim('/');
+
+            // Private attachments: GET /files/<upload>/<id>, authorised through the attachment table's scoped .get mask.
+            if (pathInfo.StartsWith("files/", StringComparison.Ordinal))
+            {
+                await HandleFile(context, dispatcher, uploadManager, "GET", pathInfo["files/".Length..]);
+                return;
+            }
 
             if (string.IsNullOrEmpty(pathInfo) && context.Request.Query.ContainsKey("mcp"))
             {
