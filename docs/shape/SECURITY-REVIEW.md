@@ -111,6 +111,13 @@ extraction, and stacked statements on drivers that permit them.
 (`ShapeRouter.php:778 parseODataFilter`), never as spliced SQL, and has no `__filterSql`
 channel at all (confirmed by grep).
 
+*Update:* the in-memory closure ran after `LIMIT` (so only the first rows were searched and
+`$count` ignored the filter). PHP now compiles `$filter` to a parameterised SQL condition
+(`ShapeRuntime\Core\ODataFilter`): columns are plain identifiers quoted with `quoteIdentifier`,
+every value is a bound `:__fN` parameter, and the router hands the expression to
+`BatchExecutor::execute()` through a trusted third argument (client `options` still cannot
+carry a filter). Covered by `tests/ODataFilter.phpt`.
+
 *Fix:* in `ReadOptions`, **reject** any client `__`-prefixed option key
 (`QUERY_VALIDATION_ERROR`) instead of skipping it; deliver the compiled OData filter to
 `Execute` through a trusted out-of-band parameter (or set it on the options dict *after*

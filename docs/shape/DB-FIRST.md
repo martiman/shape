@@ -208,7 +208,9 @@ Every read mask in the config is reachable via three URL styles. All three produ
 | `reports.topByPrefix` (hand-written) | — | — | `GET /api.php/_/reports.topByPrefix?prefix=Book%201` |
 | `users.adminList` | — | — | `GET /api.php/_/users.adminList` |
 
-`$filter`, `$orderby`, `$top`, `$skip`, `$select`, `$count` query parameters work on the REST and OData paths. The generic `_/<mask>` path is the universal escape hatch — it reaches **any** mask, including hand-written ones and admin masks for secret tables, with parameters supplied as URL query keys.
+`$filter`, `$orderby`, `$top`, `$skip`, `$select`, `$count` query parameters work on the REST and OData paths.
+
+**`$filter` syntax.** Conditions are compiled to SQL and applied *before* paging and `$count`, so a page and its count always describe the filtered set. Operators `eq ne gt ge lt le`; combine with `and`, `or`, `not` and parentheses (precedence `not` > `and` > `or`); functions `contains(col,'x')`, `startswith(col,'x')`, `endswith(col,'x')`; literals are `'text'` (`''` escapes a quote), numbers, `true`, `false`, `null` (`eq null` / `ne null`) and dates (`2026-11-20`, `2026-11-20T10:00:00Z`). Example: `seconds ge 3600 and (project_id eq 2 or contains(description,'review'))`. A malformed expression or a column the mask does not return is a `QUERY_VALIDATION_ERROR` (the latter lists the available columns). The filter composes with, and never widens, tenant and row scopes. The generic `_/<mask>` path is the universal escape hatch — it reaches **any** mask, including hand-written ones and admin masks for secret tables, with parameters supplied as URL query keys.
 
 **Array params on the generic path** accept either form:
 

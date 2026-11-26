@@ -493,15 +493,14 @@ final class ShapeRouter
             $queryItem['options'] = $options;
         }
 
-        // Execute
-        $result = $executor->execute([$queryItem], $authContext);
+        // Execute. $filter is compiled to SQL by the executor, so it applies before paging and $count.
+        $result = $executor->execute([$queryItem], $authContext, $odata['filter'] !== null ? [$entity => $odata['filter']] : []);
         $queryResult = $result['results'][0] ?? [];
 
         // Format response as OData-style JSON
         $columns = $queryResult['meta']['columns'] ?? [];
         $rows = $queryResult['rows'] ?? [];
         $selectFields = $odata['select'];
-        $filterFn = $odata['filterFn'];
 
         // Convert columnar rows to objects
         $items = [];
@@ -511,10 +510,6 @@ final class ShapeRouter
                 if ($selectFields === [] || in_array($col, $selectFields, true)) {
                     $obj[$col] = $row[$i] ?? null;
                 }
-            }
-            // Apply $filter in memory (field-level filtering from query string)
-            if ($filterFn !== null && !$filterFn($obj)) {
-                continue;
             }
             $items[] = $obj;
         }
@@ -736,7 +731,7 @@ final class ShapeRouter
     /**
      * Parse OData query string parameters.
      * Supports: $filter, $select, $orderby, $top, $skip, $count
-     * @return array{select:list<string>, orderby:list<array{field:string,dir:string}>, top:?int, skip:?int, count:bool, filterFn:?callable}
+     * @return array{select:list<string>, orderby:list<array{field:string,dir:string}>, top:?int, skip:?int, count:bool, filter:?string}
      */
     private static function parseODataQuery(string $queryString): array
     {
@@ -763,11 +758,8 @@ final class ShapeRouter
         $skip = isset($qs['$skip']) ? (int)$qs['$skip'] : null;
         $count = isset($qs['$count']) && $qs['$count'] === 'true';
 
-        // Parse $filter into a callable
-        $filterFn = null;
-        if (isset($qs['$filter']) && $qs['$filter'] !== '') {
-            $filterFn = self::parseODataFilter((string)$qs['$filter']);
-        }
+        // $filter stays a raw string: BatchExecutor compiles it to a parameterised SQL condition.
+        $filter = isset($qs['$filter']) && trim((string)$qs['$filter']) !== '' ? (string)$qs['$filter'] : null;
 
         return [
             'select' => $select,
@@ -775,127 +767,8 @@ final class ShapeRouter
             'top' => $top,
             'skip' => $skip,
             'count' => $count,
-            'filterFn' => $filterFn,
+            'filter' => $filter,
         ];
-    }
-
-    /**
-     * Parse OData $filter expression into a callable.
-     * Supports: eq, ne, gt, ge, lt, le, and, or, contains(), startswith(), endswith()
-     *
-     * @return callable(array):bool
-     */
-    private static function parseODataFilter(string $filter): callable
-    {
-        // Split by 'and' / 'or' (simple — no nested parens)
-        // We handle: field op value, contains(field,'val'), startswith(field,'val'), endswith(field,'val')
-        $conditions = [];
-        $logic = [];
-
-        // Split on ' and ' / ' or ' preserving the operator
-        $parts = preg_split('/\s+(and|or)\s+/i', $filter, -1, PREG_SPLIT_DELIM_CAPTURE);
-        if ($parts === false) {
-            $parts = [$filter];
-        }
-
-        for ($i = 0; $i < count($parts); $i++) {
-            $part = trim($parts[$i]);
-            if (strcasecmp($part, 'and') === 0 || strcasecmp($part, 'or') === 0) {
-                $logic[] = strtolower($part);
-                continue;
-            }
-
-            $fn = self::parseFilterCondition($part);
-            if ($fn !== null) {
-                $conditions[] = $fn;
-            }
-        }
-
-        return static function (array $row) use ($conditions, $logic): bool {
-            if ($conditions === []) {
-                return true;
-            }
-            $result = $conditions[0]($row);
-            for ($i = 1; $i < count($conditions); $i++) {
-                $op = $logic[$i - 1] ?? 'and';
-                if ($op === 'or') {
-                    $result = $result || $conditions[$i]($row);
-                } else {
-                    $result = $result && $conditions[$i]($row);
-                }
-            }
-            return $result;
-        };
-    }
-
-    /** @return (callable(array):bool)|null */
-    private static function parseFilterCondition(string $expr): ?callable
-    {
-        // Function-style: contains(field,'value'), startswith(field,'value'), endswith(field,'value')
-        if (preg_match('/^(contains|startswith|endswith)\s*\(\s*(\w+)\s*,\s*\'([^\']*)\'\s*\)$/i', $expr, $m)) {
-            $fn = strtolower($m[1]);
-            $field = $m[2];
-            $value = $m[3];
-            return match ($fn) {
-                'contains' => static fn(array $row): bool => str_contains(strtolower((string)($row[$field] ?? '')), strtolower($value)),
-                'startswith' => static fn(array $row): bool => str_starts_with(strtolower((string)($row[$field] ?? '')), strtolower($value)),
-                'endswith' => static fn(array $row): bool => str_ends_with(strtolower((string)($row[$field] ?? '')), strtolower($value)),
-                default => null,
-            };
-        }
-
-        // Comparison: field op value
-        if (preg_match('/^(\w+)\s+(eq|ne|gt|ge|lt|le)\s+(.+)$/', $expr, $m)) {
-            $field = $m[1];
-            $op = $m[2];
-            $rawValue = self::parseODataValue(trim($m[3]));
-
-            return static function (array $row) use ($field, $op, $rawValue): bool {
-                $actual = $row[$field] ?? null;
-                // Numeric comparison if both sides are numeric
-                if (is_numeric($actual) && is_numeric($rawValue)) {
-                    $actual = (float)$actual;
-                    $rawValue2 = (float)$rawValue;
-                } else {
-                    $rawValue2 = $rawValue;
-                }
-                return match ($op) {
-                    'eq' => $actual == $rawValue2,
-                    'ne' => $actual != $rawValue2,
-                    'gt' => $actual > $rawValue2,
-                    'ge' => $actual >= $rawValue2,
-                    'lt' => $actual < $rawValue2,
-                    'le' => $actual <= $rawValue2,
-                    default => true,
-                };
-            };
-        }
-
-        return null;
-    }
-
-    private static function parseODataValue(string $raw): mixed
-    {
-        // String literal: 'value'
-        if (preg_match("/^'(.*)'$/", $raw, $m)) {
-            return $m[1];
-        }
-        // null
-        if ($raw === 'null') {
-            return null;
-        }
-        // Boolean
-        if ($raw === 'true') {
-            return true;
-        }
-        if ($raw === 'false') {
-            return false;
-        }
-        // Number
-        if (is_numeric($raw)) {
-            return str_contains($raw, '.') ? (float)$raw : (int)$raw;
-        }
-        return $raw;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────

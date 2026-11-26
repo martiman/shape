@@ -1349,10 +1349,12 @@ final class BatchExecutor
 
     /**
      * @param list<array<string, mixed>> $queries
-        * @param array<string, mixed> $authContext
+     * @param array<string, mixed> $authContext
+     * @param array<string, string> $odataFilters Trusted, router-supplied `$filter` expressions keyed by query ref.
+     *   Compiled to SQL and applied before pagination and COUNT (never read from client `options`).
      * @return array{results:list<array<string, mixed>>}
      */
-        public function execute(array $queries, array $authContext = []): array
+    public function execute(array $queries, array $authContext = [], array $odataFilters = []): array
     {
         if ($queries === []) {
             throw new ApiException('QUERY_VALIDATION_ERROR', 'Request must include at least one query.', 400);
@@ -1400,6 +1402,19 @@ final class BatchExecutor
             // wrong $count is also a leak.
             [$mask, $resolvedParams] = $this->applyRowScopes($mask, $resolvedParams, $authContext, $ref);
 
+            // OData $filter → SQL condition over the (already scoped) mask result. Applied before
+            // pagination and COUNT so both see only matching rows.
+            $filterCols = [];
+            $baseSql = (string)$mask['sql'];
+            $baseParams = $resolvedParams;
+            $filterExpr = $odataFilters[$ref] ?? null;
+            if (is_string($filterExpr) && trim($filterExpr) !== '') {
+                $compiled = ODataFilter::compile($filterExpr, fn(string $c): string => $this->database->quoteIdentifier($c), $ref);
+                $mask['sql'] = "SELECT * FROM ({$baseSql}) AS __filter WHERE {$compiled['sql']}";
+                $resolvedParams = array_merge($resolvedParams, $compiled['params']);
+                $filterCols = $compiled['columns'];
+            }
+
             $options = $this->readOptions($query, $ref);
 
             // Push LIMIT/OFFSET into the SQL when it's safe to do so.
@@ -1407,15 +1422,22 @@ final class BatchExecutor
             $page = $this->planPagination($mask, $options, $ref);
 
             $totalCount = null;
-            if ($page['pushed'] && ($options['count'] ?? false) === true) {
-                // Separate COUNT query when paging is pushed down — without
-                // it we'd have to fetch everything just to count.
-                $countSql = "SELECT COUNT(*) AS __cnt FROM ({$mask['sql']}) AS __c";
-                $countResult = $this->database->run($countSql, $resolvedParams);
-                $totalCount = isset($countResult['rows'][0][0]) ? (int)$countResult['rows'][0][0] : 0;
-            }
+            try {
+                if ($page['pushed'] && ($options['count'] ?? false) === true) {
+                    // Separate COUNT query when paging is pushed down — without
+                    // it we'd have to fetch everything just to count.
+                    $countSql = "SELECT COUNT(*) AS __cnt FROM ({$mask['sql']}) AS __c";
+                    $countResult = $this->database->run($countSql, $resolvedParams);
+                    $totalCount = isset($countResult['rows'][0][0]) ? (int)$countResult['rows'][0][0] : 0;
+                }
 
-            $dbResult = $this->database->run($page['sql'], $resolvedParams);
+                $dbResult = $this->database->run($page['sql'], $resolvedParams);
+            } catch (ApiException $e) {
+                if ($filterCols !== [] && $e->apiCode() === 'DB_ERROR') {
+                    $this->explainFilterFailure($baseSql, $baseParams, $filterCols, $ref);
+                }
+                throw $e;
+            }
             $processed = $this->applyOptions($dbResult, $options, $ref, $page['pushed']);
             if ($totalCount !== null) {
                 $processed['total_count'] = $totalCount;
@@ -1444,6 +1466,37 @@ final class BatchExecutor
         }
 
         return ['results' => $results];
+    }
+
+    /**
+     * A query with an OData $filter failed in the database. The usual cause is a column that the mask does not return;
+     * report that as a client error listing the available columns. Otherwise the caller rethrows the original error.
+     *
+     * @param array<string, mixed> $baseParams
+     * @param list<string> $filterCols
+     */
+    private function explainFilterFailure(string $baseSql, array $baseParams, array $filterCols, string $ref): void
+    {
+        try {
+            $probe = $this->database->run("SELECT * FROM ({$baseSql}) AS __probe WHERE 1 = 0", $baseParams);
+        } catch (ApiException) {
+            return;
+        }
+        $available = $probe['columns'];
+        if ($available === []) {
+            return;
+        }
+        $lower = array_map('strtolower', $available);
+        $unknown = array_values(array_filter($filterCols, static fn(string $c): bool => !in_array(strtolower($c), $lower, true)));
+        if ($unknown !== []) {
+            throw new ApiException(
+                'QUERY_VALIDATION_ERROR',
+                'Unknown column in $filter: ' . implode(', ', $unknown) . '.',
+                400,
+                $ref,
+                ['expected' => 'one of the returned columns', 'available' => $available, 'hint' => 'Filter only on columns this mask returns: ' . implode(', ', $available) . '.']
+            );
+        }
     }
 
     /** @param array<string, mixed> $query */
