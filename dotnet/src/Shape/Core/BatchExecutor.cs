@@ -36,6 +36,23 @@ public sealed class BatchExecutor
 
     private AuditLogger? _auditLogger;
 
+    /// <summary>Audit Tier 2 sink: like <see cref="AuditLogger"/> plus before/after values.</summary>
+    public delegate void AuditValuesLogger(
+        string table,
+        string action,
+        string? rowId,
+        Dictionary<string, object?> authContext,
+        List<string> changedColumns,
+        Dictionary<string, object?>? oldValues,
+        Dictionary<string, object?>? newValues);
+
+    private AuditValuesLogger? _auditValues;
+    private HashSet<string>? _diffTables;      // null = every table
+    private List<string> _diffExclude = new();
+    private Action? _diffProbe;
+    private bool _diffProbed;
+    private const int AuditDiffMaxRows = 200;
+
     public BatchExecutor(
         Database database,
         MaskRegistry registry,
@@ -51,6 +68,26 @@ public sealed class BatchExecutor
     }
 
     public void SetAuditLogger(AuditLogger cb) => _auditLogger = cb;
+
+    /// <summary>
+    /// Audit Tier 2: capture before/after VALUES for the given tables (<c>null</c> = all). Update/delete
+    /// snapshot the matched rows (same WHERE incl. scope/tenant guards) before the mutation and log one
+    /// entry per affected row; sensitive columns are recorded as <c>[redacted]</c>. Requires
+    /// <see cref="SetAuditLogger"/>.
+    /// </summary>
+    /// <param name="probe">Called once before the first mutation to fail loudly when the audit table lacks the value columns.</param>
+    public void SetAuditDiff(IEnumerable<string>? tables, IEnumerable<string> exclude, AuditValuesLogger logger, Action? probe = null)
+    {
+        _diffTables = tables == null ? null : new HashSet<string>(tables, StringComparer.Ordinal);
+        _diffExclude = exclude.ToList();
+        _auditValues = logger;
+        _diffProbe = probe;
+        _diffProbed = false;
+    }
+
+    private bool DiffActiveFor(string table) =>
+        _auditValues != null && _auditLogger != null && table != "audit_log"
+        && (_diffTables == null || _diffTables.Contains(table));
 
     // ---------------------------------------------------------------------
     // Mutations
@@ -344,6 +381,19 @@ public sealed class BatchExecutor
         if (data != null)
             data = ApplyAuditColumns(data, action, mask, authContext);
 
+        var diff = DiffActiveFor(table);
+        List<Dictionary<string, object?>>? snapshot = null;
+        if (diff)
+        {
+            if (!_diffProbed && _diffProbe != null)
+            {
+                _diffProbe();   // fail before the data changes, not after
+                _diffProbed = true;
+            }
+            if (action != "insert")
+                snapshot = SnapshotRows(table, filter ?? new(), mask, authContext, action);
+        }
+
         int affected;
         long? newId = null;
         string? rowId;
@@ -378,7 +428,10 @@ public sealed class BatchExecutor
         if (_auditLogger != null && table != "audit_log")
         {
             var changed = action == "delete" ? new List<string>() : (data?.Keys.ToList() ?? new List<string>());
-            _auditLogger(table, action, rowId, authContext, changed);
+            if (diff && affected > 0)
+                LogWithDiff(table, action, rowId, authContext, changed, data ?? new(), snapshot, mask);
+            else
+                _auditLogger(table, action, rowId, authContext, changed);
         }
 
         RunAfterHook(table, action, affected);
@@ -1007,6 +1060,127 @@ public sealed class BatchExecutor
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// Rows an update/delete is about to touch (same WHERE + scope/tenant guards as the mutation).
+    /// One extra row signals "more than the cap".
+    /// </summary>
+    private List<Dictionary<string, object?>> SnapshotRows(
+        string table,
+        Dictionary<string, object?> filter,
+        Mask mask,
+        Dictionary<string, object?> authContext,
+        string action)
+    {
+        var rows = new List<Dictionary<string, object?>>();
+        if (filter.Count == 0)
+            return rows;   // the mutation itself rejects an empty filter
+
+        var (whereSql, parameters) = BuildWhereClause(filter, mask, authContext);
+        if (action == "delete" && !string.IsNullOrEmpty(mask.SoftDelete))
+            whereSql += $" AND {QuoteName(mask.SoftDelete)} IS NULL";
+
+        var cap = AuditDiffMaxRows + 1;
+        var sql = $"SELECT {_database.TopClause(cap)}* FROM {QuoteName(table)} WHERE {whereSql}{_database.RowLimitSuffix(cap)}";
+        var res = _database.Run(sql, parameters);
+        foreach (var r in res.Rows)
+        {
+            var o = new Dictionary<string, object?>(StringComparer.Ordinal);
+            for (var i = 0; i < res.Columns.Count; i++) o[res.Columns[i]] = r[i];
+            rows.Add(o);
+        }
+        return rows;
+    }
+
+    /// <summary>
+    /// Audit entries with values: insert → new values; update → old/new of the columns that really changed,
+    /// per affected row; delete → the full old row.
+    /// </summary>
+    private void LogWithDiff(
+        string table,
+        string action,
+        string? rowId,
+        Dictionary<string, object?> authContext,
+        List<string> changed,
+        Dictionary<string, object?> data,
+        List<Dictionary<string, object?>>? snapshot,
+        Mask mask)
+    {
+        var log = _auditValues!;
+        var pk = string.IsNullOrEmpty(mask.Pk) ? "id" : mask.Pk;
+
+        if (action == "insert")
+        {
+            var added = new Dictionary<string, object?>(data, StringComparer.Ordinal);
+            if (rowId != null && !added.ContainsKey(pk)) added[pk] = rowId;
+            log(table, "insert", rowId, authContext, changed, null, Redact(table, added));
+            return;
+        }
+
+        var rows = snapshot ?? new();
+        if (rows.Count == 0 || rows.Count > AuditDiffMaxRows)
+        {
+            // Nothing to compare (or too many rows to snapshot): Tier-1 style entry, flagged.
+            var note = rows.Count > AuditDiffMaxRows
+                ? new Dictionary<string, object?> { ["_note"] = $"more than {AuditDiffMaxRows} rows matched; values not captured" }
+                : null;
+            log(table, action, rowId, authContext, changed, null, note);
+            return;
+        }
+
+        foreach (var row in rows)
+        {
+            var rid = row.TryGetValue(pk, out var pv) && pv != null && IsScalar(pv)
+                ? Convert.ToString(pv, CultureInfo.InvariantCulture)
+                : rowId;
+
+            if (action == "delete")
+            {
+                log(table, "delete", rid, authContext, new List<string>(), Redact(table, row), null);
+                continue;
+            }
+
+            var oldV = new Dictionary<string, object?>(StringComparer.Ordinal);
+            var newV = new Dictionary<string, object?>(StringComparer.Ordinal);
+            foreach (var (col, value) in data)
+            {
+                row.TryGetValue(col, out var before);
+                if (SameValue(before, value)) continue;
+                oldV[col] = before;
+                newV[col] = value;
+            }
+            log(table, "update", rid, authContext, changed, Redact(table, oldV), Redact(table, newV));
+        }
+    }
+
+    private static bool SameValue(object? a, object? b)
+    {
+        if (a == null || b == null) return a == null && b == null;
+        if (IsScalar(a) && IsScalar(b))
+            return string.Equals(
+                Convert.ToString(a, CultureInfo.InvariantCulture),
+                Convert.ToString(b, CultureInfo.InvariantCulture),
+                StringComparison.Ordinal);
+        return Equals(a, b);
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex SensitiveColumn =
+        new("(password|passwd|secret|token|api_?key|credential)|_hash$", System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    /// <summary>
+    /// Replace values of sensitive columns (passwords, tokens, secrets, API keys, <c>*_hash</c>, plus the
+    /// configured exclude list) with a marker; the column NAME stays visible so the audit still shows it changed.
+    /// </summary>
+    private Dictionary<string, object?> Redact(string table, Dictionary<string, object?> values)
+    {
+        var result = new Dictionary<string, object?>(values, StringComparer.Ordinal);
+        foreach (var col in values.Keys)
+        {
+            if (SensitiveColumn.IsMatch(col) || _diffExclude.Contains(col) || _diffExclude.Contains(table + "." + col))
+                result[col] = "[redacted]";
+        }
+        return result;
     }
 
     /// <summary>

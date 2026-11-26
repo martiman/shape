@@ -880,11 +880,21 @@ final class ShapeRouter
         // successful mutation appends one row.
         $auditTable = $shapeData['audit_log_table'] ?? null;
         if (is_string($auditTable) && $auditTable !== '') {
-            $auditLogger = new \Shape\Audit\AuditLogger($database, $auditTable);
+            // Tier 2: 'audit_diff' => true | ['table', ...] records before/after values (see DB-FIRST.md).
+            $diffCfg = $config['audit_diff'] ?? false;
+            $withValues = $diffCfg === true || (is_array($diffCfg) && $diffCfg !== []);
+            $auditLogger = new \Shape\Audit\AuditLogger($database, $auditTable, $withValues);
             $executor->setAuditLogger(
-                static fn(string $t, string $a, ?string $rid, array $auth, array $cols) =>
-                    $auditLogger->log($t, $a, $rid, $auth, $cols)
+                static fn(string $t, string $a, ?string $rid, array $auth, array $cols, ?array $old = null, ?array $new = null) =>
+                    $auditLogger->log($t, $a, $rid, $auth, $cols, $old, $new)
             );
+            if ($withValues) {
+                $executor->setAuditDiff(
+                    is_array($diffCfg) ? array_values(array_map('strval', $diffCfg)) : null,
+                    is_array($config['audit_diff_exclude'] ?? null) ? $config['audit_diff_exclude'] : [],
+                    static fn() => $auditLogger->assertValueColumns(),
+                );
+            }
         }
         return $executor;
     }

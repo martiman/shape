@@ -45,12 +45,40 @@ final class AuditLogger
     public function __construct(
         private readonly Database $database,
         private readonly string $tableName = 'audit_log',
+        private readonly bool $withValues = false,
     ) {
+    }
+
+    /**
+     * Tier 2 guard: the audit table needs `old_values` and `new_values` (TEXT/JSON, NULL) to store
+     * before/after values. Called once before the first mutation so a missing column fails loudly
+     * before any data changes, not after.
+     */
+    public function assertValueColumns(): void
+    {
+        try {
+            // Bare identifiers on purpose: SQLite treats a double-quoted unknown identifier as a
+            // string literal, which would make this probe pass even when the columns are missing.
+            $this->database->run(
+                'SELECT old_values, new_values FROM ' . $this->database->quoteIdentifier($this->tableName) . ' WHERE 1 = 0',
+                []
+            );
+        } catch (\Throwable $e) {
+            throw new \ShapeRuntime\Core\ApiException(
+                'AUDIT_CONFIG_ERROR',
+                "audit_diff is enabled but '{$this->tableName}' has no old_values / new_values columns.",
+                500,
+                null,
+                ['hint' => "ALTER TABLE {$this->tableName} ADD old_values TEXT NULL, ADD new_values TEXT NULL;  (MySQL; use your dialect's ADD COLUMN syntax elsewhere.)"]
+            );
+        }
     }
 
     /**
      * @param array<string, mixed> $authContext
      * @param list<string>         $changedColumns Column names touched (data keys for insert/update; empty for delete)
+     * @param array<string, mixed>|null $oldValues Tier 2 only (audit_diff): values before the change
+     * @param array<string, mixed>|null $newValues Tier 2 only (audit_diff): values after the change
      */
     public function log(
         string $targetTable,
@@ -58,6 +86,8 @@ final class AuditLogger
         ?string $rowId,
         array $authContext,
         array $changedColumns,
+        ?array $oldValues = null,
+        ?array $newValues = null,
     ): void {
         $row = [
             'occurred_at' => gmdate('Y-m-d H:i:s'),
@@ -71,6 +101,14 @@ final class AuditLogger
                 ? null
                 : json_encode(array_values($changedColumns), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         ];
+
+        if ($this->withValues) {
+            $enc = static fn(?array $v): ?string => $v === null || $v === []
+                ? null
+                : json_encode($v, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR);
+            $row['old_values'] = $enc($oldValues);
+            $row['new_values'] = $enc($newValues);
+        }
 
         $cols = array_keys($row);
         $quoted = array_map(fn(string $c): string => $this->database->quoteIdentifier($c), $cols);

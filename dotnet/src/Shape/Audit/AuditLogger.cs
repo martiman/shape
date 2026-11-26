@@ -33,10 +33,40 @@ public sealed class AuditLogger
     private readonly Database _database;
     private readonly string _tableName;
 
-    public AuditLogger(Database database, string tableName = "audit_log")
+    private readonly bool _withValues;
+
+    public AuditLogger(Database database, string tableName = "audit_log", bool withValues = false)
     {
         _database = database;
         _tableName = tableName;
+        _withValues = withValues;
+    }
+
+    /// <summary>
+    /// Tier 2 guard: the audit table needs nullable <c>old_values</c> / <c>new_values</c> columns. Called once
+    /// before the first mutation so a missing column fails loudly before any data changes.
+    /// </summary>
+    public void AssertValueColumns()
+    {
+        try
+        {
+            // Bare identifiers on purpose: SQLite treats a double-quoted unknown identifier as a string
+            // literal, which would make this probe pass even when the columns are missing.
+            _database.Run(
+                $"SELECT old_values, new_values FROM {_database.QuoteIdentifier(_tableName)} WHERE 1 = 0", new());
+        }
+        catch (Exception)
+        {
+            throw new ApiException(
+                "AUDIT_CONFIG_ERROR",
+                $"audit_diff is enabled but '{_tableName}' has no old_values / new_values columns.",
+                500,
+                null,
+                new Dictionary<string, object?>
+                {
+                    ["hint"] = $"ALTER TABLE {_tableName} ADD old_values TEXT NULL, ADD new_values TEXT NULL;  (MySQL; use your dialect's ADD COLUMN syntax elsewhere.)"
+                });
+        }
     }
 
     /// <summary>
@@ -48,7 +78,18 @@ public sealed class AuditLogger
         string action,
         string? rowId,
         Dictionary<string, object?> authContext,
-        List<string> changedColumns)
+        List<string> changedColumns) =>
+        LogWithValues(targetTable, action, rowId, authContext, changedColumns, null, null);
+
+    /// <summary>Tier 2: same entry plus the before/after values (only written when constructed with values).</summary>
+    public void LogWithValues(
+        string targetTable,
+        string action,
+        string? rowId,
+        Dictionary<string, object?> authContext,
+        List<string> changedColumns,
+        Dictionary<string, object?>? oldValues,
+        Dictionary<string, object?>? newValues)
     {
         var row = new Dictionary<string, object?>
         {
@@ -63,6 +104,14 @@ public sealed class AuditLogger
                 ? null
                 : JsonSerializer.Serialize(changedColumns)
         };
+
+        if (_withValues)
+        {
+            static string? Enc(Dictionary<string, object?>? v) =>
+                v == null || v.Count == 0 ? null : JsonSerializer.Serialize(v, new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+            row["old_values"] = Enc(oldValues);
+            row["new_values"] = Enc(newValues);
+        }
 
         var cols = row.Keys.ToList();
         var quoted = cols.Select(c => _database.QuoteIdentifier(c));

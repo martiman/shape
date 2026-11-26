@@ -901,7 +901,40 @@ CREATE INDEX idx_audit_log_target      ON audit_log(table_name, row_id);
 - **Actor identifier from `authContext.id` / `oid` / `sub`.** Same lookup as the per-row `created_by` / `updated_by` columns, so a single actor shows up identically in both places. Local Shape JWT (HS256, `sub`) and OIDC tokens (Entra ID `oid` after claim mapping) both work.
 - **Insert `row_id` from the new row's PK.** `BatchExecutor::performInsert` uses `Database::insertReturningId` for portable lastInsertId across all drivers.
 - **Update / delete `row_id` from `filter.id`** (or first scalar filter value) — best-effort, documented as such.
-- **`changed` records column NAMES only**, not values. Keeps PII out of the log by default. Tier 2 will add an opt-in `'audit_diff' => true` for full before/after value capture.
+- **`changed` records column NAMES only**, not values. Keeps PII out of the log by default. For before/after values opt in to *Tier 2* below.
+
+### Tier 2 — before/after values (`audit_diff`, opt-in)
+
+"Who changed the amount, and from what to what?" needs values, not just column names. Turn it on in config and add two nullable columns to `audit_log`:
+
+```sql
+ALTER TABLE audit_log ADD old_values TEXT NULL, ADD new_values TEXT NULL;   -- JSON; use your dialect's syntax
+```
+
+```php
+'audit_diff'         => true,                        // every table; or ['cases', 'contracts'] for just those
+'audit_diff_exclude' => ['contracts.iban', 'note'],  // 'table.column' or 'column': value recorded as "[redacted]"
+```
+
+```csharp
+AuditDiff = new AuditDiffConfig { Tables = new() { "cases", "contracts" }, Exclude = new() { "contracts.iban" } },  // Tables = null: all
+```
+
+What lands in the row:
+
+| Action | `old_values` | `new_values` |
+|---|---|---|
+| `insert` | `NULL` | the inserted columns (+ the new primary key) |
+| `update` | the **changed** columns as they were | the same columns as they are now (columns sent with an unchanged value are left out) |
+| `delete` | the full row that was removed | `NULL` |
+
+- **One entry per affected row.** An update or delete whose filter matches several rows (`filter: {status: 'draft'}`) writes one audit row per row, each with its own `row_id` taken from the primary key. Up to 200 rows are captured; beyond that a single entry is written with `new_values = {"_note": "more than 200 rows matched; values not captured"}`. A mutation that touches nothing still logs a names-only entry, as in Tier 1.
+- **Snapshot uses the mutation's own WHERE**, including row scopes and tenant guards, and it runs before the change in the same connection (and transaction when `transaction: true`), so the audit row is atomic with the data change.
+- **Sensitive columns are never stored.** Columns whose name contains `password`, `passwd`, `secret`, `token`, `api_key`, `api-key` or `credential`, or ends in `_hash`, and everything in `audit_diff_exclude`, are recorded as `"[redacted]"`. The column name stays, so the log still shows that it changed.
+- **Fails loudly, early.** With `audit_diff` on and the columns missing, the first mutation of a request fails with `AUDIT_CONFIG_ERROR` (and the `ALTER TABLE` hint) **before** any data changes.
+- **Cost.** Updates and deletes do one extra `SELECT` per mutation; enable it per table where the history matters.
+- **Values sent by the client are logged as sent.** Computed or database-default columns that were not part of the mutation do not appear; `updated_at` / `updated_by` stamped by the audit-columns convention do.
+
 
 ### Built-in admin masks
 
@@ -933,7 +966,7 @@ Soft-delete + audit columns + audit log + secret tables + admin masks + OIDC aut
 ### What this is NOT (Tier 1 limits)
 
 - **No read auditing.** Reads aren't logged. Read-audit doubles storage cost and is typically only required for HIPAA-grade compliance — defer until needed.
-- **No before/after value capture.** Column names changed, not values. Tier 2 (opt-in) will add full diffs.
+- **No before/after values by default.** Column names only; opt in to Tier 2 below for values.
 - **No retention enforcement.** The log grows forever; document a SQL-driven retention job as part of your deployment runbook.
 - **No CDC streaming.** This is a database table, not a Kafka topic. If you need a real-time event stream, plug it into a downstream consumer of the table.
 

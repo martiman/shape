@@ -16,7 +16,7 @@ public static class ShapeRouter
     {
         var dispatcher = new OpDispatcher(
             config.Db, config.Auth, config.Masks, config.Validators, config.Commands,
-            config.Runtime.AuditLogTable, config.CommandRoles);
+            config.Runtime.AuditLogTable, config.CommandRoles, config.AuditDiff);
         var manifestGen = new ManifestGenerator();
         var openApiGen = new OpenApiGenerator();
         var uploadManager = new UploadManager(config.Uploads);

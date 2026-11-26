@@ -33,6 +33,7 @@ public sealed class OpDispatcher
     private readonly IAuthGuard _guardNoDb;
 
     private readonly string? _auditLogTable;
+    private readonly AuditDiffConfig? _auditDiff;
 
     public OpDispatcher(
         DatabaseConfig dbConfig,
@@ -41,7 +42,8 @@ public sealed class OpDispatcher
         Dictionary<string, ValidatorConfig>? validators,
         Dictionary<string, Func<Dictionary<string, object?>, CommandContext, Dictionary<string, object?>>>? commands,
         string? auditLogTable = null,
-        Dictionary<string, List<string>>? commandRoles = null)
+        Dictionary<string, List<string>>? commandRoles = null,
+        AuditDiffConfig? auditDiff = null)
     {
         _dbConfig = dbConfig;
         _authConfig = authConfig;
@@ -54,6 +56,7 @@ public sealed class OpDispatcher
         _adminAuth = new AdminAuth(authConfig);
         _guardNoDb = BuildGuard(database: null);
         _auditLogTable = auditLogTable;
+        _auditDiff = auditDiff;
     }
 
     /// <summary>
@@ -66,8 +69,10 @@ public sealed class OpDispatcher
         var executor = new BatchExecutor(database, _masks, _validators, _authConfig.Tenancy, _authConfig.Scopes);
         if (!string.IsNullOrEmpty(_auditLogTable))
         {
-            var logger = new AuditLogger(database, _auditLogTable);
+            var logger = new AuditLogger(database, _auditLogTable, withValues: _auditDiff != null);
             executor.SetAuditLogger(logger.Log);
+            if (_auditDiff != null)
+                executor.SetAuditDiff(_auditDiff.Tables, _auditDiff.Exclude, logger.LogWithValues, logger.AssertValueColumns);
         }
         return executor;
     }

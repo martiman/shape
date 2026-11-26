@@ -23,8 +23,15 @@ final class BatchExecutor
     private ParamResolver $resolver;
     private ValidatorRegistry $validators;
 
-    /** @var (callable(string,string,?string,array,list<string>):void)|null */
+    /** @var (callable(string,string,?string,array<string, mixed>,list<string>,?array<string, mixed>,?array<string, mixed>):void)|null */
     private $auditLogger = null;
+
+    /** @var array{tables:?list<string>, exclude:list<string>}|null Audit Tier 2 (before/after values). */
+    private ?array $auditDiff = null;
+
+    /** @var (callable():void)|null */
+    private $auditProbe = null;
+    private bool $auditProbed = false;
 
     /** @var list<string> Roles that see across tenants (MULTI-TENANCY-PLAN §2.3). */
     private array $unscopedRoles = [];
@@ -58,6 +65,32 @@ final class BatchExecutor
     public function setAuditLogger(callable $cb): void
     {
         $this->auditLogger = $cb;
+    }
+
+    /**
+     * Audit Tier 2: capture before/after VALUES (not just column names) for the
+     * given tables. Requires an audit logger. Update/delete snapshot the matched
+     * rows (same WHERE + scope guards as the mutation) before it runs and log one
+     * audit entry per affected row; sensitive columns are recorded as '[redacted]'.
+     *
+     * @param list<string>|null $tables  null = every table
+     * @param list<string>      $exclude 'column' or 'table.column' entries whose values are redacted
+     * @param (callable():void)|null $probe called once before the first mutation to fail loudly when
+     *                                      the audit table lacks the old_values/new_values columns
+     */
+    public function setAuditDiff(?array $tables, array $exclude = [], ?callable $probe = null): void
+    {
+        $this->auditDiff = ['tables' => $tables, 'exclude' => $exclude];
+        $this->auditProbe = $probe;
+        $this->auditProbed = false;
+    }
+
+    private function diffActiveFor(string $table): bool
+    {
+        if ($this->auditDiff === null || $this->auditLogger === null || $table === 'audit_log') {
+            return false;
+        }
+        return $this->auditDiff['tables'] === null || in_array($table, $this->auditDiff['tables'], true);
     }
 
     /**
@@ -376,6 +409,18 @@ final class BatchExecutor
             $this->checkTenantForeignKeys($data, $mask, $authContext, is_string($ref) ? $ref : null);
         }
 
+        $diff = $this->diffActiveFor($table);
+        $snapshot = null;
+        if ($diff) {
+            if (!$this->auditProbed && $this->auditProbe !== null) {
+                ($this->auditProbe)();  // fail before the data changes, not after
+                $this->auditProbed = true;
+            }
+            if ($action !== 'insert') {
+                $snapshot = $this->snapshotRows($table, $filter, $mask, $scopeGuards, $action);
+            }
+        }
+
         $affected = 0;
         $rowId = null;
         $newId = null;
@@ -401,7 +446,11 @@ final class BatchExecutor
         // baseline so it can never trigger this path recursively.
         if ($this->auditLogger !== null && $table !== 'audit_log') {
             $changedColumns = $action === 'delete' ? [] : array_keys($data ?? []);
-            ($this->auditLogger)($table, $action, $rowId, $authContext, $changedColumns);
+            if ($diff && $affected > 0) {
+                $this->logWithDiff($table, $action, $rowId, $authContext, $changedColumns, $data ?? [], $snapshot, $mask);
+            } else {
+                ($this->auditLogger)($table, $action, $rowId, $authContext, $changedColumns, null, null);
+            }
         }
 
         // Run after hooks
@@ -565,6 +614,132 @@ final class BatchExecutor
         }
 
         return $output;
+    }
+
+    /** Max rows whose values are captured for one multi-row update/delete. */
+    private const AUDIT_DIFF_MAX_ROWS = 200;
+
+    /**
+     * Rows an update/delete is about to touch (same WHERE + scope guards the
+     * mutation uses), as assoc arrays. One extra row signals "more than the cap".
+     *
+     * @param array<string, mixed> $filter
+     * @param array<string, mixed> $mask
+     * @param list<ScopeGuard> $scopeGuards
+     * @return list<array<string, mixed>>
+     */
+    private function snapshotRows(string $table, array $filter, array $mask, array $scopeGuards, string $action): array
+    {
+        if ($filter === []) {
+            return [];  // the mutation itself rejects an empty filter
+        }
+        [$whereSql, $params] = $this->buildWhereClause($filter);
+        $whereSql .= $this->buildScopeGuardSql($scopeGuards, $params);
+        $softCol = $mask['soft_delete'] ?? null;
+        if ($action === 'delete' && is_string($softCol) && $softCol !== '') {
+            $whereSql .= ' AND ' . $this->quoteName($softCol) . ' IS NULL';
+        }
+        $inner = 'SELECT * FROM ' . $this->quoteName($table) . ' WHERE ' . $whereSql;
+        $sql = SqlDialect::paginate($this->database->getDriver(), $inner, self::AUDIT_DIFF_MAX_ROWS + 1, 0);
+        $res = $this->database->run($sql, $params);
+        $rows = [];
+        foreach ($res['rows'] as $row) {
+            $rows[] = array_combine($res['columns'], $row);
+        }
+        return $rows;
+    }
+
+    /**
+     * Audit entries with values: insert → new values; update → old/new of the
+     * columns that really changed, per affected row; delete → full old row.
+     *
+     * @param array<string, mixed> $authContext
+     * @param list<string> $changedColumns
+     * @param array<string, mixed> $data
+     * @param list<array<string, mixed>>|null $snapshot
+     * @param array<string, mixed> $mask
+     */
+    private function logWithDiff(string $table, string $action, ?string $rowId, array $authContext, array $changedColumns, array $data, ?array $snapshot, array $mask): void
+    {
+        $log = $this->auditLogger;
+        if ($log === null) {
+            return;
+        }
+        $pk = isset($mask['pk']) && is_string($mask['pk']) && $mask['pk'] !== '' ? $mask['pk'] : 'id';
+
+        if ($action === 'insert') {
+            $new = $data;
+            if ($rowId !== null && !array_key_exists($pk, $new)) {
+                $new[$pk] = $rowId;
+            }
+            $log($table, 'insert', $rowId, $authContext, $changedColumns, null, $this->redact($table, $new));
+            return;
+        }
+
+        $rows = $snapshot ?? [];
+        if ($rows === [] || count($rows) > self::AUDIT_DIFF_MAX_ROWS) {
+            // Nothing to compare (or too many rows to snapshot): Tier-1 style entry, flagged.
+            $note = count($rows) > self::AUDIT_DIFF_MAX_ROWS
+                ? ['_note' => 'more than ' . self::AUDIT_DIFF_MAX_ROWS . ' rows matched; values not captured']
+                : null;
+            $log($table, $action, $rowId, $authContext, $changedColumns, null, $note);
+            return;
+        }
+
+        foreach ($rows as $row) {
+            $rid = isset($row[$pk]) && is_scalar($row[$pk]) ? (string)$row[$pk] : $rowId;
+            if ($action === 'delete') {
+                $log($table, 'delete', $rid, $authContext, [], $this->redact($table, $row), null);
+                continue;
+            }
+            $old = [];
+            $new = [];
+            foreach ($data as $col => $value) {
+                $col = (string)$col;
+                $before = $row[$col] ?? null;
+                if (self::sameValue($before, $value)) {
+                    continue;
+                }
+                $old[$col] = $before;
+                $new[$col] = $value;
+            }
+            $log($table, 'update', $rid, $authContext, $changedColumns, $this->redact($table, $old), $this->redact($table, $new));
+        }
+    }
+
+    private static function sameValue(mixed $a, mixed $b): bool
+    {
+        if ($a === null || $b === null) {
+            return $a === $b;
+        }
+        if (is_scalar($a) && is_scalar($b)) {
+            return (string)$a === (string)$b;
+        }
+        return $a === $b;
+    }
+
+    /**
+     * Replace values of sensitive columns (passwords, tokens, secrets, API keys,
+     * `*_hash`, plus the configured exclude list) with a marker; the column NAME
+     * stays visible so the audit still shows that it changed.
+     *
+     * @param array<string, mixed> $values
+     * @return array<string, mixed>
+     */
+    private function redact(string $table, array $values): array
+    {
+        $exclude = $this->auditDiff['exclude'] ?? [];
+        foreach ($values as $col => $_) {
+            $c = strtolower((string)$col);
+            if (
+                preg_match('/(password|passwd|secret|token|api_?key|credential)|_hash$/', $c) === 1
+                || in_array((string)$col, $exclude, true)
+                || in_array($table . '.' . $col, $exclude, true)
+            ) {
+                $values[$col] = '[redacted]';
+            }
+        }
+        return $values;
     }
 
     /**
