@@ -169,7 +169,7 @@ final class ShapeRouter
                     [
                         'expected' => ['op' => 'string (required)', 'payload' => 'object'],
                         'example' => ['op' => 'manifest'],
-                        'hint' => "Set op to one of: 'query', 'mutation', 'command', 'manifest', 'openapi', 'auth.token', 'auth.refresh', 'auth.logout'.",
+                        'hint' => "Set op to one of: 'query', 'mutation', 'command', 'manifest', 'openapi', 'auth.token', 'auth.refresh', 'auth.logout', 'auth.change-password'.",
                     ]
                 );
             }
@@ -300,6 +300,11 @@ final class ShapeRouter
                 case 'auth.admin.change-password':
                     $adminClaims = $adminAuth->authorizeAdmin();
                     $result = $loginService->changePassword($payload, $adminClaims);
+                    break;
+
+                case 'auth.change-password':
+                    $ownClaims = $guard->authorize(self::normalizeHeaders(self::readHeaders()));
+                    $result = $loginService->changeOwnPassword($payload, $ownClaims);
                     break;
 
                 case 'mutation':

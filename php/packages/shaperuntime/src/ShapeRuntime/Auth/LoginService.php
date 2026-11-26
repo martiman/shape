@@ -289,7 +289,7 @@ final class LoginService
         if ($email === '' || $password === '') {
             throw new ApiException('AUTH_VALIDATION_ERROR', 'Fields email and password are required.', 400);
         }
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if (!$this->isValidLogin($email)) {
             throw new ApiException('AUTH_VALIDATION_ERROR', 'Field email must be valid.', 400);
         }
 
@@ -373,7 +373,7 @@ final class LoginService
         if ($email === '' || $newPassword === '') {
             throw new ApiException('AUTH_VALIDATION_ERROR', 'Fields email and new_password are required.', 400);
         }
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if (!$this->isValidLogin($email)) {
             throw new ApiException('AUTH_VALIDATION_ERROR', 'Field email must be valid.', 400);
         }
 
@@ -436,6 +436,89 @@ final class LoginService
             }
             throw new ApiException('DB_ERROR', 'Database query failed.', 500);
         }
+    }
+
+    /**
+     * `auth.change-password`: the signed-in user changes their own password.
+     * Requires the current password; revokes all refresh tokens so other
+     * sessions must log in again. The user is identified by the verified token
+     * (`sub`), never by a payload field.
+     *
+     * @param array<string, mixed> $payload {current_password, new_password}
+     * @param array<string, mixed> $authContext Verified claims from JwtGuard
+     * @return array<string, mixed>
+     */
+    public function changeOwnPassword(array $payload, array $authContext): array
+    {
+        $this->ensureLocalLoginEnabled();
+
+        $current = isset($payload['current_password']) ? (string)$payload['current_password'] : '';
+        $new = isset($payload['new_password']) ? (string)$payload['new_password'] : '';
+        if ($current === '' || $new === '') {
+            throw new ApiException('AUTH_VALIDATION_ERROR', 'Fields current_password and new_password are required.', 400);
+        }
+        $minLength = (int)($this->authConfig['password_min_length'] ?? 8);
+        if (strlen($new) < $minLength) {
+            throw new ApiException('AUTH_VALIDATION_ERROR', "Password must have at least {$minLength} characters.", 400);
+        }
+
+        $userId = (int)($authContext['sub'] ?? $authContext['id'] ?? 0);
+        if ($userId <= 0) {
+            throw new ApiException('AUTH_INVALID', 'Token has no usable user id.', 401);
+        }
+
+        $usersTable = $this->usersTable();
+        $tokensTable = $this->refreshTokensTable();
+        $pdo = $this->newPdo();
+
+        try {
+            $select = $pdo->prepare("SELECT password_hash, is_active FROM {$usersTable} WHERE id = :id");
+            $select->bindValue(':id', $userId, PDO::PARAM_INT);
+            $select->execute();
+            $row = $select->fetch(PDO::FETCH_ASSOC);
+
+            $hash = is_array($row) ? (string)($row['password_hash'] ?? '') : '';
+            if ($hash === '' || (int)($row['is_active'] ?? 0) !== 1) {
+                password_verify($current, self::DUMMY_BCRYPT_HASH);
+                throw new ApiException('AUTH_INVALID_CREDENTIALS', 'Current password is incorrect.', 401);
+            }
+            if (!password_verify($current, $hash)) {
+                throw new ApiException('AUTH_INVALID_CREDENTIALS', 'Current password is incorrect.', 401);
+            }
+
+            $newHash = password_hash($new, PASSWORD_BCRYPT);
+            if (!is_string($newHash) || $newHash === '') {
+                throw new ApiException('AUTH_CONFIG_ERROR', 'Failed to generate password hash.', 500);
+            }
+
+            $pdo->beginTransaction();
+            $update = $pdo->prepare("UPDATE {$usersTable} SET password_hash = :h, updated_at = CURRENT_TIMESTAMP WHERE id = :id");
+            $update->bindValue(':h', $newHash);
+            $update->bindValue(':id', $userId, PDO::PARAM_INT);
+            $update->execute();
+
+            $revoke = $pdo->prepare("UPDATE {$tokensTable} SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = :uid AND revoked_at IS NULL");
+            $revoke->bindValue(':uid', $userId, PDO::PARAM_INT);
+            $revoke->execute();
+            $revoked = $revoke->rowCount();
+            $pdo->commit();
+
+            return ['updated' => true, 'revoked_refresh_tokens' => $revoked];
+        } catch (PDOException $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw new ApiException('DB_ERROR', 'Database query failed.', 500);
+        }
+    }
+
+    /** Login names must look like an email unless `auth.login_format` is 'any' (e.g. "jan.novak"). */
+    private function isValidLogin(string $login): bool
+    {
+        if (($this->authConfig['login_format'] ?? 'email') === 'any') {
+            return $login !== '' && strlen($login) <= 190;
+        }
+        return filter_var($login, FILTER_VALIDATE_EMAIL) !== false;
     }
 
     /**

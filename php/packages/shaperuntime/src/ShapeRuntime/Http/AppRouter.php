@@ -151,6 +151,11 @@ final class AppRouter
                     $result = $loginService->changePassword($payload, $adminClaims);
                     break;
 
+                case 'auth.change-password':
+                    $ownClaims = $guard->authorize(self::normalizeHeaders(self::readHeaders()));
+                    $result = $loginService->changeOwnPassword($payload, $ownClaims);
+                    break;
+
                 case 'mutation':
                     $headers = self::normalizeHeaders(self::readHeaders());
                     $authContext = $guard->authorize($headers);

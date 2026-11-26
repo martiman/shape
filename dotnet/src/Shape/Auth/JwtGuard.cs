@@ -259,6 +259,12 @@ public sealed class AuthConfig
     public int AccessTokenTtl { get; set; } = 3600;
     public int RefreshTokenTtl { get; set; } = 2592000;
     public int PasswordMinLength { get; set; } = 8;
+
+    /// <summary>
+    /// What admin create-user / change-password accept as the login name:
+    /// <c>"email"</c> (default, must be a valid email) or <c>"any"</c> (e.g. "jan.novak").
+    /// </summary>
+    public string LoginFormat { get; set; } = "email";
     public List<string> AssignableRoles { get; set; } = new() { "user", "admin" };
 
     /// <summary>
@@ -278,7 +284,7 @@ public sealed class AuthConfig
     /// <summary>
     /// When set, the <c>auth.exchange</c> op swaps an app-validated external
     /// token (opaque bearer, session id, …) for a Shape-issued JWT — the
-    /// brownfield bridge (brownfield adapter guide §3). Constructed
+    /// brownfield bridge (TISCLOUD-SHAPE-EXTRACTION-PLAN §3). Constructed
     /// programmatically; the <see cref="ITokenExchangeSource"/> is code.
     /// </summary>
     public TokenExchangeConfig? Exchange { get; set; }

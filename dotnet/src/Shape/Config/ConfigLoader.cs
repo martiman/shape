@@ -176,6 +176,7 @@ public static class ConfigLoader
         if (dto.AccessTokenTtl.HasValue) auth.AccessTokenTtl = dto.AccessTokenTtl.Value;
         if (dto.RefreshTokenTtl.HasValue) auth.RefreshTokenTtl = dto.RefreshTokenTtl.Value;
         if (dto.PasswordMinLength.HasValue) auth.PasswordMinLength = dto.PasswordMinLength.Value;
+        if (!string.IsNullOrEmpty(dto.LoginFormat)) auth.LoginFormat = dto.LoginFormat!;
         if (dto.AssignableRoles != null) auth.AssignableRoles = dto.AssignableRoles;
         if (dto.LocalLoginDisabled.HasValue) auth.LocalLoginDisabled = dto.LocalLoginDisabled.Value;
         if (dto.Oidc != null) auth.Oidc = MapOidc(dto.Oidc);
@@ -618,6 +619,7 @@ public static class ConfigLoader
         public int? AccessTokenTtl { get; set; }
         public int? RefreshTokenTtl { get; set; }
         public int? PasswordMinLength { get; set; }
+        public string? LoginFormat { get; set; }
         public List<string>? AssignableRoles { get; set; }
         public bool? LocalLoginDisabled { get; set; }
         public OidcDto? Oidc { get; set; }

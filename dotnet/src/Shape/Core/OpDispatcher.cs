@@ -129,6 +129,13 @@ public sealed class OpDispatcher
                 return (_loginService.ChangePassword(payload, authContext), 200);
             }
 
+            case "auth.change-password":
+            {
+                using var database = CreateDatabase();
+                var authContext = BuildGuard(database).Authorize(AdminAuth.NormalizeHeaders(context));
+                return (_loginService.ChangeOwnPassword(payload, authContext), 200);
+            }
+
             case "query":
             {
                 using var database = CreateDatabase();

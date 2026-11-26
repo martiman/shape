@@ -23,6 +23,7 @@ This is what every Shape app gets out of the box. No additional configuration be
 | `POST {op: 'auth.logout', payload: {refresh_token}}` | Revoke a refresh token. |
 | `POST {op: 'auth.admin.create-user', payload: {...}}` | Admin-only: create a new user. Requires `role: 'admin'` in the caller's JWT. |
 | `POST {op: 'auth.admin.change-password', payload: {...}}` | Admin-only: reset a user's password. |
+| `POST {op: 'auth.change-password', payload: {current_password, new_password}}` | Signed-in user changes their own password. The user comes from the token; the current password is verified; all refresh tokens are revoked (other sessions must log in again). |
 
 ### How it works
 
@@ -42,6 +43,7 @@ This is what every Shape app gets out of the box. No additional configuration be
     'access_token_ttl'    => 3600,        // seconds
     'refresh_token_ttl'   => 2592000,     // seconds (30 days)
     'password_min_length' => 8,
+    'login_format' => 'email',          // 'email' (default) | 'any': what admin create-user / change-password accept as login name (e.g. "jan.novak")
     'users_table'         => 'users',
     'refresh_tokens_table' => 'refresh_tokens',
     'assignable_roles'    => ['user', 'admin'],

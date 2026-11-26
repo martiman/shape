@@ -370,7 +370,7 @@ public sealed class LoginService
 
         if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
             throw new ApiException("AUTH_VALIDATION_ERROR", "Fields email and password are required.", 400);
-        if (!IsValidEmail(email))
+        if (!IsValidLogin(email))
             throw new ApiException("AUTH_VALIDATION_ERROR", "Field email must be valid.", 400);
         if (password.Length < _authConfig.PasswordMinLength)
             throw new ApiException("AUTH_VALIDATION_ERROR",
@@ -523,7 +523,7 @@ public sealed class LoginService
         if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(newPassword))
             throw new ApiException("AUTH_VALIDATION_ERROR",
                 "Fields email and new_password are required.", 400);
-        if (!IsValidEmail(email))
+        if (!IsValidLogin(email))
             throw new ApiException("AUTH_VALIDATION_ERROR", "Field email must be valid.", 400);
         if (newPassword.Length < _authConfig.PasswordMinLength)
             throw new ApiException("AUTH_VALIDATION_ERROR",
@@ -562,6 +562,68 @@ public sealed class LoginService
                 ["email"] = email,
                 ["revoked_refresh_tokens"] = revoked
             };
+        }
+        catch
+        {
+            if (db.IsInTransaction) db.Rollback();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// <c>auth.change-password</c>: the signed-in user changes their own password.
+    /// Requires the current password; revokes all refresh tokens. The user is
+    /// identified by the verified token (<c>sub</c>), never by a payload field.
+    /// </summary>
+    public Dictionary<string, object?> ChangeOwnPassword(
+        Dictionary<string, object?> payload,
+        Dictionary<string, object?> authContext)
+    {
+        EnsureLocalLoginEnabled();
+
+        var current = GetString(payload, "current_password") ?? "";
+        var newPassword = GetString(payload, "new_password") ?? "";
+        if (current.Length == 0 || newPassword.Length == 0)
+            throw new ApiException("AUTH_VALIDATION_ERROR",
+                "Fields current_password and new_password are required.", 400);
+        if (newPassword.Length < _authConfig.PasswordMinLength)
+            throw new ApiException("AUTH_VALIDATION_ERROR",
+                $"Password must have at least {_authConfig.PasswordMinLength} characters.", 400);
+
+        var userId = ToInt(authContext.GetValueOrDefault("sub") ?? authContext.GetValueOrDefault("id") ?? 0);
+        if (userId <= 0)
+            throw new ApiException("AUTH_INVALID", "Token has no usable user id.", 401);
+
+        using var db = new Database(_dbConfig);
+        var usersTable = db.QuoteIdentifier(SafeTable(_authConfig.UsersTable, "users"));
+        var tokensTable = db.QuoteIdentifier(SafeTable(_authConfig.RefreshTokensTable, "refresh_tokens"));
+
+        var result = db.Run(
+            $"SELECT password_hash, is_active FROM {usersTable} WHERE id = @id",
+            new Dictionary<string, object?> { ["id"] = userId });
+        var row = result.Rows.Count > 0 ? result.Rows[0] : null;
+        var hash = row != null && row.Length > 0 ? row[0]?.ToString() ?? "" : "";
+        var active = row != null && row.Length > 1 ? ToInt(row[1] ?? 0) : 0;
+        if (hash.Length == 0 || active != 1)
+        {
+            BCrypt.Net.BCrypt.Verify(current, DummyBcryptHash);
+            throw new ApiException("AUTH_INVALID_CREDENTIALS", "Current password is incorrect.", 401);
+        }
+        if (!BCrypt.Net.BCrypt.Verify(current, hash))
+            throw new ApiException("AUTH_INVALID_CREDENTIALS", "Current password is incorrect.", 401);
+
+        var newHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        db.BeginTransaction();
+        try
+        {
+            db.Exec(
+                $"UPDATE {usersTable} SET password_hash = @password_hash WHERE id = @id",
+                new Dictionary<string, object?> { ["password_hash"] = newHash, ["id"] = userId });
+            var revoked = db.Exec(
+                $"UPDATE {tokensTable} SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = @user_id AND revoked_at IS NULL",
+                new Dictionary<string, object?> { ["user_id"] = userId });
+            db.Commit();
+            return new Dictionary<string, object?> { ["updated"] = true, ["revoked_refresh_tokens"] = revoked };
         }
         catch
         {
@@ -868,6 +930,11 @@ public sealed class LoginService
         var bytes = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(input));
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
+
+    private bool IsValidLogin(string login) =>
+        string.Equals(_authConfig.LoginFormat, "any", StringComparison.OrdinalIgnoreCase)
+            ? login.Length > 0 && login.Length <= 190
+            : IsValidEmail(login);
 
     private static bool IsValidEmail(string email)
     {
